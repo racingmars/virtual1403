@@ -54,6 +54,7 @@ type virtual1403 struct {
 	font       []byte
 	curLine    int
 	leftMargin float64
+	background gofpdf.Template
 }
 
 // Page size
@@ -82,14 +83,19 @@ func New1403(font []byte) (Job, error) {
 	// to assume the font just magically gets embedded automatically.
 	j.pdf.AddUTF8FontFromBytes("userfont", "", j.font)
 
+	j.background = j.pdf.CreateTemplate(func(tpl *gofpdf.Tpl) {
+		tpl.SetXY(0, 0)
+		tpl.SetMargins(0, 0, 0)
+		tpl.SetAutoPageBreak(false, 0)
+		drawBackgroundTemplate(tpl)
+	})
+
 	// We will dynamically determine how wide 132 characters of the chosen
 	// font is so that we can correctly position (center) the output area on
 	// the page. The left margin of our text output area will be the center
 	// of the page minus half of the line width.
 	j.pdf.SetFont("userfont", "", v1430FontSize)
 	j.leftMargin = v1403W/2 - determineLineWidth(j.pdf)/2
-
-	j.pdf.SetHeaderFunc(func() { drawBackground(j.pdf) })
 
 	j.NewPage()
 
@@ -114,6 +120,7 @@ func (job *virtual1403) AddLine(s string, linefeed bool) {
 
 func (job *virtual1403) NewPage() {
 	job.pdf.AddPage()
+	job.pdf.UseTemplate(job.background)
 	job.pdf.SetFont("userfont", "", v1430FontSize)
 	// simulating a 1403 with form control that skips the first 5 physically
 	// printable lines.
@@ -124,7 +131,7 @@ func (job *virtual1403) EndJob(w io.Writer) error {
 	return job.pdf.Output(w)
 }
 
-func drawBackground(pdf *gofpdf.Fpdf) {
+func drawBackgroundTemplate(pdf *gofpdf.Tpl) {
 	const feedHoleRadius = 5.5
 
 	// Alignment fiducial
