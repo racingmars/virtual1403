@@ -68,7 +68,7 @@ func haveCR(s *scanner, b byte) stateFunc {
 		s.emitLine(false)
 		return haveCR
 	case charLF:
-		s.emitLine(false)
+		s.emitLine(true)
 		return getNextByte
 	case charFF:
 		s.emitLineAndPage()
