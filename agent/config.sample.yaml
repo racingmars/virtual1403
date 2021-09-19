@@ -1,0 +1,4 @@
+hercules_address: "127.0.0.1:1403"
+output_directory: "pdfs"
+# Optional font file; uncomment to use your own font
+#font_file: "font-file-name.ttf"

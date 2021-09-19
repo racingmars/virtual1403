@@ -1,0 +1,8 @@
+dist
+agent/agent
+agent/virtual1403
+agent/config.yaml
+agent/pdfs
+pdftest/pdftest
+pdftest/*.pdf
+fonts
