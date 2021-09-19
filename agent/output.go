@@ -29,8 +29,8 @@ func newOutputHandler(outputDir string, font []byte) (*outputHandler, error) {
 	return o, nil
 }
 
-func (o *outputHandler) AddLine(line string) {
-	o.job.AddLine(line)
+func (o *outputHandler) AddLine(line string, linefeed bool) {
+	o.job.AddLine(line, linefeed)
 }
 
 func (o *outputHandler) PageBreak() {

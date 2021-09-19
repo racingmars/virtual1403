@@ -61,19 +61,20 @@ func disposeBytes(s *scanner, b byte) stateFunc {
 
 // haveCR is a state where we have received a CR control character, and we are
 // waiting to see if it is a bare CR, a CRLF, or a sequence of multiple CRs.
+// Bare CRs indicate we should overtype the next line on the current line.
 func haveCR(s *scanner, b byte) stateFunc {
 	switch b {
 	case charCR:
-		s.emitLine()
+		s.emitLine(false)
 		return haveCR
 	case charLF:
-		s.emitLine()
+		s.emitLine(false)
 		return getNextByte
 	case charFF:
 		s.emitLineAndPage()
 		return getNextByte
 	default:
-		s.emitLine()
+		s.emitLine(false)
 		s.curline[s.pos] = b
 		s.pos++
 		return getNextByte
@@ -85,16 +86,16 @@ func haveCR(s *scanner, b byte) stateFunc {
 func haveLF(s *scanner, b byte) stateFunc {
 	switch b {
 	case charCR:
-		s.emitLine()
+		s.emitLine(true)
 		return getNextByte
 	case charLF:
-		s.emitLine()
+		s.emitLine(true)
 		return haveLF
 	case charFF:
 		s.emitLineAndPage()
 		return getNextByte
 	default:
-		s.emitLine()
+		s.emitLine(true)
 		s.curline[s.pos] = b
 		s.pos++
 		return getNextByte

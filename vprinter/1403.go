@@ -96,7 +96,7 @@ func New1403(font []byte) (Job, error) {
 	return j, nil
 }
 
-func (job *virtual1403) AddLine(s string) {
+func (job *virtual1403) AddLine(s string, linefeed bool) {
 	if job.curLine >= maxLinesPerPage {
 		job.NewPage()
 	}
@@ -107,7 +107,9 @@ func (job *virtual1403) AddLine(s string) {
 	s = strings.ToUpper(s)
 	job.pdf.SetXY(job.leftMargin, float64(job.curLine*12)+.25)
 	job.pdf.CellFormat(0, 12, s, "", 0, "LM", false, 0, "")
-	job.curLine++
+	if linefeed {
+		job.curLine++
+	}
 }
 
 func (job *virtual1403) NewPage() {

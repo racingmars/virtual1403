@@ -24,9 +24,9 @@ although if there is a reliable way to detect the last line of a job (which
 must immediately be followed by a form feed character) with a regular
 expression, the code can be easily adapted for other operating systems.
 
-While not necessary for Hercules printer output (which appears to just use
-LF at the end of lines), we will tolerate CR, LF, CR+LF, or LF+CR as a line
-ending.
+We tolerate a variety of combinations of CR, LF, and FF. A bare CR will cause
+the next line to overtype the current line. Bare LF, CR+LF, or LF+CR have the
+effect of CR+LF.
 
 Lines will be trimmed to 132 bytes; additional bytes on a line will be
 discarded.

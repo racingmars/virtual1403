@@ -30,8 +30,11 @@ import (
 // Job is the interface that each virtual printers must implement to receive
 // print jobs.
 type Job interface {
-	// AddLine adds one line of output to the print job.
-	AddLine(string)
+	// AddLine adds one line of output to the print job. linefeed indicates
+	// whether, in addition to a carriage return action at the end of the
+	// line, the printer should advance by one line. (linefeed=false will
+	// cause the next line to overtype the current line.)
+	AddLine(text string, linefeed bool)
 
 	// NewPage indicates that the print job encountered a form feed character.
 	NewPage()

@@ -26,7 +26,7 @@ import (
 
 // PrinterHandler interface receives the output of printer output parsing.
 type PrinterHandler interface {
-	AddLine(line string)
+	AddLine(line string, linefeed bool)
 	PageBreak()
 	EndOfJob()
 }
@@ -69,7 +69,7 @@ func Scan(r *bufio.Reader, handler PrinterHandler) error {
 	}
 }
 
-func (s *scanner) emitLine() {
+func (s *scanner) emitLine(linefeed bool) {
 	// We need to build a valid UTF-8 string. For now we'll handle a couple
 	// mainframe-specific characters we might see, but someday probably need
 	// to make a general Hecules-default-to-UTF-8 table.
@@ -94,7 +94,7 @@ func (s *scanner) emitLine() {
 		utf8runes = append(utf8runes, r)
 	}
 	s.prevline = string(utf8runes)
-	s.handler.AddLine(s.prevline)
+	s.handler.AddLine(s.prevline, linefeed)
 	s.pos = 0
 }
 
@@ -106,7 +106,7 @@ var eojRegexp = regexp.MustCompile(`(?m)\*\*\*\*.+END.+(?:JOB|STC).+ROOM.+(?:JOB
 // we might be at the end of the job, so we'll check for the end of the
 // separator page.
 func (s *scanner) emitLineAndPage() {
-	s.emitLine()
+	s.emitLine(true)
 	if eojRegexp.MatchString(s.prevline) {
 		s.endJob()
 	} else {
