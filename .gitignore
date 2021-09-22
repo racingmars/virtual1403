@@ -6,3 +6,6 @@ agent/pdfs
 pdftest/pdftest
 pdftest/*.pdf
 fonts
+webserver/webserver
+webserver/*.db
+webserver/testclient/testclient

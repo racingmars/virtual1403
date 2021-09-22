@@ -1,6 +1,21 @@
+# github.com/boltdb/bolt v1.3.1
+## explicit
+github.com/boltdb/bolt
 # github.com/jung-kurt/gofpdf v1.16.2
 ## explicit
 github.com/jung-kurt/gofpdf
+# github.com/klauspost/compress v1.13.6
+## explicit
+github.com/klauspost/compress
+github.com/klauspost/compress/fse
+github.com/klauspost/compress/huff0
+github.com/klauspost/compress/internal/snapref
+github.com/klauspost/compress/zstd
+github.com/klauspost/compress/zstd/internal/xxhash
+# golang.org/x/sys v0.0.0-20210921065528-437939a70204
+## explicit
+golang.org/x/sys/internal/unsafeheader
+golang.org/x/sys/unix
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 ## explicit
 gopkg.in/yaml.v3
