@@ -28,30 +28,31 @@ import (
 	"mime/quotedprintable"
 	"net/smtp"
 	"net/textproto"
+	"regexp"
 	"time"
 )
 
 type Config struct {
-	FromAddress string
-	Server      string
-	Port        int
-	Username    string
-	Password    string
+	FromAddress string `yaml:"from_address"`
+	Server      string `yaml:"server"`
+	Port        int    `yaml:"port"`
+	Username    string `yaml:"username"`
+	Password    string `yaml:"password"`
 }
 
 func Send(config Config, to, subject, body, filename string, attachment []byte) error {
 	var buf bytes.Buffer
 
-	buf.WriteString("To: " + to + "\r\n")
-	buf.WriteString("From: " + config.FromAddress + "\r\n")
-	buf.WriteString("Subject: " + subject + "\r\n")
-	buf.WriteString("Date: ")
-	buf.WriteString(time.Now().Format(time.RFC822Z))
-	buf.WriteString("\r\n")
-	buf.WriteString("Content-Type: multipart/mixed\r\n")
-	buf.WriteString("\r\n")
-
 	m := multipart.NewWriter(&buf)
+
+	fmt.Fprintf(&buf, "To: %s\r\n", to)
+	fmt.Fprintf(&buf, "From: %s\r\n", config.FromAddress)
+	fmt.Fprintf(&buf, "Subject: %s\r\n", subject)
+	fmt.Fprintf(&buf, "Date: %s\r\n", time.Now().Format(time.RFC822Z))
+	fmt.Fprintf(&buf, "MIME-version: 1.0\r\n")
+	fmt.Fprintf(&buf, "Content-Type: multipart/mixed; boundary=%s\r\n",
+		m.Boundary())
+	fmt.Fprintf(&buf, "\r\n")
 
 	headers := make(textproto.MIMEHeader)
 	headers.Set("Content-Type", "text/plain; charset=UTF-8")
@@ -66,7 +67,7 @@ func Send(config Config, to, subject, body, filename string, attachment []byte) 
 	qp.Close()
 
 	headers = make(textproto.MIMEHeader)
-	headers.Set("Content-Type", "application/pdf")
+	headers.Set("Content-Type", "application/pdf; filename="+filename)
 	headers.Set("Content-Transfer-Encoding", "base64")
 	headers.Set("Content-Disposition", "attachment; filename="+filename)
 	w, err = m.CreatePart(headers)
@@ -89,6 +90,14 @@ func Send(config Config, to, subject, body, filename string, attachment []byte) 
 	}
 
 	return nil
+}
+
+// from https://www.emailregex.com/
+var mailRegexp = regexp.MustCompile(`(?:[a-z0-9!#$%&'*+/=?^_\x60{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_\x60{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])`)
+
+// ValidateAddress will return true if the email address appears to be valid.
+func ValidateAddress(email string) bool {
+	return mailRegexp.MatchString(email)
 }
 
 // base64 will encode the input bytes, in, to base64 wrapped at 76 characters

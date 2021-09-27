@@ -40,7 +40,7 @@ func main() {
 		panic(err)
 	}
 	defer f.Close()
-	if err = printer.EndJob(f); err != nil {
+	if _, err = printer.EndJob(f); err != nil {
 		panic(err)
 	}
 }

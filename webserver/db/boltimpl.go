@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 
 	"github.com/boltdb/bolt"
+
+	"github.com/racingmars/virtual1403/webserver/model"
 )
 
 type boltimpl struct {
@@ -61,22 +63,54 @@ func (db *boltimpl) Close() error {
 	return db.bdb.Close()
 }
 
-func (db *boltimpl) SaveUser(user User) error {
+// SaveUser will save a new user or update an existing user in the database.
+// We also want an index on the user's access key, so we *always* keep the
+// user bucket and access key bucket in sync here. We delete and recreate the
+// access key each time, even if it hasn't changed. This is simpler logic and
+// user record updates aren't frequent enough that we need to optimize this.
+func (db *boltimpl) SaveUser(user model.User) error {
+	// Prepare the user for saving in DB by converting to JSON.
+	userjson, err := json.Marshal(&user)
+	if err != nil {
+		return err
+	}
+
 	return db.bdb.Update(func(tx *bolt.Tx) error {
 		userBucket := tx.Bucket([]byte(userBucketName))
-		buf, err := json.Marshal(user)
-		if err != nil {
+		accessBucket := tx.Bucket([]byte(accessKeyBucketName))
+
+		// Does the user already exist?
+		olduserjson := userBucket.Get([]byte(user.Email))
+		if olduserjson != nil {
+			// yes... let's grab the old access key so we can delete it
+			var olduser model.User
+			if err := json.Unmarshal(olduserjson, &olduser); err != nil {
+				return err
+			}
+			accessBucket.Delete([]byte(olduser.AccessKey))
+		}
+
+		// Save the new user record and access key linked to the user
+		if err := userBucket.Put([]byte(user.Email), userjson); err != nil {
 			return err
 		}
-		return userBucket.Put([]byte(user.Email), buf)
+		if err := accessBucket.Put([]byte(user.AccessKey),
+			[]byte(user.Email)); err != nil {
+			return err
+		}
+
+		return nil
 	})
 }
 
-func (db *boltimpl) GetUser(email string) (User, error) {
-	var user User
+func (db *boltimpl) GetUser(email string) (model.User, error) {
+	var user model.User
 	err := db.bdb.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(userBucketName))
 		v := b.Get([]byte(email))
+		if v == nil {
+			return ErrNotFound
+		}
 		if err := json.Unmarshal(v, &user); err != nil {
 			return err
 		}
@@ -88,4 +122,47 @@ func (db *boltimpl) GetUser(email string) (User, error) {
 	}
 
 	return user, nil
+}
+
+func (db *boltimpl) GetUserForAccessKey(key string) (model.User, error) {
+	var email string
+	if err := db.bdb.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(accessKeyBucketName))
+		emailbytes := b.Get([]byte(key))
+		if emailbytes == nil {
+			return ErrNotFound
+		}
+		email = string(emailbytes)
+		return nil
+	}); err != nil {
+		return model.User{}, err
+	}
+
+	return db.GetUser(email)
+}
+
+// DeleteUser needs to keep user bucket and access key bucket in sync, so
+// will delete from both.
+func (db *boltimpl) DeleteUser(email string) error {
+	return db.bdb.Update(func(tx *bolt.Tx) error {
+		userBucket := tx.Bucket([]byte(userBucketName))
+		accessBucket := tx.Bucket([]byte(accessKeyBucketName))
+
+		olduserjson := userBucket.Get([]byte(email))
+		if olduserjson == nil {
+			// no such user
+			return nil
+		}
+
+		var olduser model.User
+		if err := json.Unmarshal(olduserjson, &olduser); err != nil {
+			return err
+		}
+
+		// Now we just delete access key and user
+		accessBucket.Delete([]byte(olduser.AccessKey))
+		userBucket.Delete([]byte(email))
+
+		return nil
+	})
 }

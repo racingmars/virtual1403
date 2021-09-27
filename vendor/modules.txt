@@ -12,6 +12,10 @@ github.com/klauspost/compress/huff0
 github.com/klauspost/compress/internal/snapref
 github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
+# golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+## explicit
+golang.org/x/crypto/bcrypt
+golang.org/x/crypto/blowfish
 # golang.org/x/sys v0.0.0-20210921065528-437939a70204
 ## explicit
 golang.org/x/sys/internal/unsafeheader

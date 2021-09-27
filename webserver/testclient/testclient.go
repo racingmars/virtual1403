@@ -45,13 +45,13 @@ func main() {
 	enc.Close()
 
 	req, err := http.NewRequest(http.MethodPost,
-		"http://localhost:4000/print", &b)
+		"http://localhost:4444/print", &b)
 	if err != nil {
 		panic(err)
 	}
 	req.Header.Set("Content-Encoding", "zstd")
 	req.Header.Set("Content-Type", "text/x-print-job")
-	req.Header.Set("Authorization", "Bearer abc123")
+	req.Header.Set("Authorization", "Bearer sJOuFKzVaIKnJBJrrsmv2w==")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

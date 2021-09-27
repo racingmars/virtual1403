@@ -9,3 +9,4 @@ fonts
 webserver/webserver
 webserver/*.db
 webserver/testclient/testclient
+webserver/config.yaml

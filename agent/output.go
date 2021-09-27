@@ -57,11 +57,11 @@ func (o *outputHandler) EndOfJob() {
 		return
 	}
 	defer f.Close()
-	err = o.job.EndJob(f)
+	n, err := o.job.EndJob(f)
 	if err != nil {
 		log.Printf("ERROR: couldn't write PDF output: %v\n", err)
 		return
 	}
 
-	log.Printf("INFO:  wrote PDF to %s\n", filename)
+	log.Printf("INFO:  wrote %d page PDF to %s\n", n, filename)
 }

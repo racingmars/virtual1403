@@ -53,6 +53,7 @@ type virtual1403 struct {
 	pdf        *gofpdf.Fpdf
 	font       []byte
 	curLine    int
+	pages      int
 	leftMargin float64
 	background gofpdf.Template
 }
@@ -125,10 +126,11 @@ func (job *virtual1403) NewPage() {
 	// simulating a 1403 with form control that skips the first 5 physically
 	// printable lines.
 	job.curLine = 5
+	job.pages++
 }
 
-func (job *virtual1403) EndJob(w io.Writer) error {
-	return job.pdf.Output(w)
+func (job *virtual1403) EndJob(w io.Writer) (int, error) {
+	return job.pages, job.pdf.Output(w)
 }
 
 func drawBackgroundTemplate(pdf *gofpdf.Tpl) {

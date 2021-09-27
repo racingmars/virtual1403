@@ -20,6 +20,8 @@ package db
 
 import (
 	"errors"
+
+	"github.com/racingmars/virtual1403/webserver/model"
 )
 
 var ErrNotFound = errors.New("not found")
@@ -27,13 +29,8 @@ var ErrNotFound = errors.New("not found")
 type DB interface {
 	Close() error
 
-	SaveUser(user User) error
-	GetUser(email string) (User, error)
-}
-
-type User struct {
-	Email        string
-	PasswordHash string
-	AccessKey    string
-	IsAdmin      bool
+	SaveUser(user model.User) error
+	GetUser(email string) (model.User, error)
+	GetUserForAccessKey(key string) (model.User, error)
+	DeleteUser(email string) error
 }

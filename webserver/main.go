@@ -19,6 +19,8 @@ package main
 // along with virtual1403. If not, see <https://www.gnu.org/licenses/>.
 
 import (
+	_ "embed"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -33,27 +35,53 @@ type application struct {
 	mailconfig mailer.Config
 }
 
+//go:embed IBMPlexMono-Regular.ttf
+var defaultFont []byte
+
 func main() {
 	var app application
 	var err error
 
-	app.db, err = db.NewDB("virtual1403.db")
+	config, errs := readConfig("config.yaml")
+	if len(errs) > 0 {
+		for _, err := range errs {
+			log.Printf("ERROR configuration: %v", err)
+		}
+		log.Fatal("FATAL configuration errors")
+	}
+
+	// If the user requested a font file, see if we can load it. Otherwise,
+	// use our standard embedded font.
+	if config.FontFile != "" {
+		log.Printf("INFO  loading font %s", config.FontFile)
+		app.font, err = vprinter.LoadFont(config.FontFile)
+		if err != nil {
+			log.Fatalf("FATAL unable to load font: %v", err)
+		}
+	} else {
+		app.font = defaultFont
+	}
+
+	app.db, err = db.NewDB(config.DatabaseFile)
 	if err != nil {
 		panic(err)
 	}
 	defer app.db.Close()
 
-	app.font, err = vprinter.LoadFont("../agent/IBMPlexMono-Regular.ttf")
-	if err != nil {
-		panic(err)
+	app.mailconfig = config.MailConfig
+
+	if config.CreateAdmin != "" {
+		if err := app.createAdmin(config.CreateAdmin); err != nil {
+			log.Fatalf("FATAL unable to create admin user: %v", err)
+		}
 	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", home)
 	mux.HandleFunc("/print", app.printjob)
 
-	log.Println("Starting server on :4000")
-	err = http.ListenAndServe(":4000", mux)
+	log.Printf("Starting server on :%d", config.ListenPort)
+	err = http.ListenAndServe(fmt.Sprintf(":%d", config.ListenPort), mux)
 	log.Fatal(err)
 }
 

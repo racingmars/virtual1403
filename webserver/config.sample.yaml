@@ -1,0 +1,13 @@
+listen_port: 4444
+database_file: virtual1403.db
+create_admin: admin@example.com
+
+# font_file is an optional font file to use
+#font_file: font.ttf
+
+mail_config:
+  from_address: virtual.1403@example.com
+  server: smtp.example.com
+  port: 587
+  username: virtual.1403
+  password: asdf1234

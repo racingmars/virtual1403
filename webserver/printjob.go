@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"unicode/utf8"
@@ -103,6 +104,21 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Authenticate
+	authHdr := r.Header.Get("Authorization")
+	authHdr = strings.TrimPrefix(authHdr, "Bearer ")
+	user, err := a.db.GetUserForAccessKey(authHdr)
+	if err != nil {
+		log.Printf("INFO  unauthorized web service call from %s",
+			r.RemoteAddr)
+		http.Error(w, "Authentication failure", http.StatusUnauthorized)
+		return
+	}
+	if !user.IsVerified {
+		http.Error(w, "User's email address has not been verified",
+			http.StatusForbidden)
+	}
+
 	// Content must be zstd-compressed.
 	if r.Header.Get("Content-Encoding") != "zstd" {
 		w.Header().Set("Accept-Encoding", "zstd")
@@ -145,18 +161,23 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 
 	// Create the PDF
 	var pdfBuffer bytes.Buffer
-	if err = job.EndJob(&pdfBuffer); err != nil {
+	var pagecount int
+	if pagecount, err = job.EndJob(&pdfBuffer); err != nil {
 		http.Error(w, fmt.Sprintf("error creating PDF: %v", err),
 			http.StatusInternalServerError)
 		return
 	}
 
-	if err = mailer.Send(a.mailconfig, "mwilson@mattwilson.org",
-		"Your PDF", "Attached is your PDF.\r\n", "job.pdf",
-		pdfBuffer.Bytes()); err != nil {
+	err = mailer.Send(a.mailconfig, user.Email,
+		"Printout for your job",
+		"The intern in the machine room has carefully collated your job and prepared it for delivery. Please find it attached to this message.\r\n",
+		"printout.pdf", pdfBuffer.Bytes())
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	log.Printf("INFO  sent %d pages to %s", pagecount, user.Email)
 
 	// HTTP 200 will be returned if we make it this far.
 }
