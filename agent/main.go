@@ -21,12 +21,12 @@ package main
 import (
 	"bufio"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
-	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -42,11 +42,15 @@ var defaultFont []byte
 
 type configuration struct {
 	HerculesAddress string `yaml:"hercules_address"`
+	Mode            string `yaml:"mode"`
+	ServiceAddress  string `yaml:"service_address"`
+	APIKey          string `yaml:"api_key"`
 	OutputDir       string `yaml:"output_directory"`
 	FontFile        string `yaml:"font_file"`
 }
 
 func main() {
+	var handler scanner.PrinterHandler
 	startupMessage()
 
 	// Load configuration file
@@ -55,49 +59,52 @@ func main() {
 		log.Fatalf("FATAL: %v", err)
 	}
 
-	// Slight input sanitization
-	conf.HerculesAddress = strings.TrimSpace(conf.HerculesAddress)
-	conf.OutputDir = strings.TrimSpace(conf.OutputDir)
-	conf.FontFile = strings.TrimSpace(conf.FontFile)
-
-	// Verify required fields are present
-	if conf.HerculesAddress == "" {
-		log.Fatal("FATAL: must set 'hercules_address' in the config file")
-	}
-
-	if conf.OutputDir == "" {
-		log.Fatal("FATAL: must set 'output_directory' in the config file")
-	}
-
-	// Make sure the output directory exists
-	if err = verifyOrCreateDir(conf.OutputDir); err != nil {
-		log.Fatalf("FATAL: %v", err.Error())
-	}
-
-	log.Printf("INFO:  Will create PDFs in directory `%s`", conf.OutputDir)
-
-	// Verify we have a font we can use. If the user doesn't provide a font,
-	// we will use our embedded copy of IBM Plex Mono. If the user does
-	// provide a font, we will make sure we can read the file, use it in a
-	// PDF, and that it is a fixed-width font.
-	var font []byte
-	if conf.FontFile == "" {
-		// easy... just use default font
-		log.Printf("INFO:  Using default font")
-		font = defaultFont
-	} else {
-		log.Printf("INFO:  Attempting to load font %s", conf.FontFile)
-		font, err = vprinter.LoadFont(conf.FontFile)
-		if err != nil {
-			log.Fatalf("FATAL: couldn't load requested font: %v", err)
+	errs := validateConfig(conf)
+	if errs != nil {
+		for _, err := range errs {
+			log.Printf("ERROR: %s", err.Error())
 		}
-		log.Printf("INFO:  Successfully loaded font %s", conf.FontFile)
+		log.Fatalf("FATAL: invalid configuration")
 	}
 
-	// Set up our output handler
-	handler, err := newOutputHandler(conf.OutputDir, font)
-	if err != nil {
-		log.Fatalf("FATAL: %v", err)
+	if conf.Mode == "local" {
+		// setup for local mode
+
+		// Make sure the output directory exists
+		if err = verifyOrCreateDir(conf.OutputDir); err != nil {
+			log.Fatalf("FATAL: %v", err.Error())
+		}
+		log.Printf("INFO:  Will create PDFs in directory `%s`",
+			conf.OutputDir)
+
+		// Verify we have a font we can use. If the user doesn't provide a
+		// font, we will use our embedded copy of IBM Plex Mono. If the user
+		// does provide a font, we will make sure we can read the file, use
+		// it in a PDF, and that it is a fixed-width font.
+		var font []byte
+		if conf.FontFile == "" {
+			// easy... just use default font
+			log.Printf("INFO:  Using default font")
+			font = defaultFont
+		} else {
+			log.Printf("INFO:  Attempting to load font %s", conf.FontFile)
+			font, err = vprinter.LoadFont(conf.FontFile)
+			if err != nil {
+				log.Fatalf("FATAL: couldn't load requested font: %v", err)
+			}
+			log.Printf("INFO:  Successfully loaded font %s", conf.FontFile)
+		}
+
+		// Set up our output handler
+		handler, err = newPDFOutputHandler(conf.OutputDir, font)
+		if err != nil {
+			log.Fatalf("FATAL: %v", err)
+		}
+	} else if conf.Mode == "online" {
+		// setup for online mode
+		log.Printf("INFO:  will use online print API at `%s`",
+			conf.ServiceAddress)
+		handler = newOnlineOutputHandler(conf.ServiceAddress, conf.APIKey)
 	}
 
 	// Hercules sometimes closes connections on the printer socket device even
@@ -131,7 +138,37 @@ func loadConfig(path string) (configuration, error) {
 	return c, nil
 }
 
-func handleHercules(address string, handler *outputHandler) {
+func validateConfig(c configuration) []error {
+	var errs []error
+
+	// Verify required fields are present
+	if c.HerculesAddress == "" {
+		errs = append(errs, errors.New("must set 'hercules_address' in the config file"))
+	}
+
+	if !(c.Mode == "local" || c.Mode == "online") {
+		errs = append(errs, errors.New("'mode' must be either 'local' or 'online'"))
+	}
+
+	if c.Mode == "local" {
+		if c.OutputDir == "" {
+			errs = append(errs, errors.New("must set 'output_directory' in the config file"))
+		}
+	}
+
+	if c.Mode == "online" {
+		if c.ServiceAddress == "" {
+			errs = append(errs, errors.New("must set 'service_address' in the config file"))
+		}
+		if c.APIKey == "" {
+			errs = append(errs, errors.New("must set 'api_key' in the config file"))
+		}
+	}
+
+	return errs
+}
+
+func handleHercules(address string, handler scanner.PrinterHandler) {
 	log.Printf("INFO:  Connecting to Hercules on %s...\n", address)
 	conn, err := net.Dial("tcp", address)
 	if err != nil {

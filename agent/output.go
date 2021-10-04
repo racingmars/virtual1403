@@ -1,22 +1,43 @@
 package main
 
+// Copyright 2021 Matthew R. Wilson <mwilson@mattwilson.org>
+//
+// This file is part of virtual1403
+// <https://github.com/racingmars/virtual1403>.
+//
+// virtual1403 is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// virtual1403 is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with virtual1403. If not, see <https://www.gnu.org/licenses/>.
+
 import (
 	"log"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/racingmars/virtual1403/scanner"
 	"github.com/racingmars/virtual1403/vprinter"
 )
 
-type outputHandler struct {
+type pdfOutputHandler struct {
 	job       vprinter.Job
 	outputDir string
 	font      []byte
 }
 
-func newOutputHandler(outputDir string, font []byte) (*outputHandler, error) {
-	o := &outputHandler{
+func newPDFOutputHandler(outputDir string, font []byte) (
+	scanner.PrinterHandler, error) {
+
+	o := &pdfOutputHandler{
 		outputDir: outputDir,
 		font:      font,
 	}
@@ -29,27 +50,30 @@ func newOutputHandler(outputDir string, font []byte) (*outputHandler, error) {
 	return o, nil
 }
 
-func (o *outputHandler) AddLine(line string, linefeed bool) {
+func (o *pdfOutputHandler) AddLine(line string, linefeed bool) {
 	o.job.AddLine(line, linefeed)
 }
 
-func (o *outputHandler) PageBreak() {
+func (o *pdfOutputHandler) PageBreak() {
 	o.job.NewPage()
 }
 
-func (o *outputHandler) EndOfJob() {
+func (o *pdfOutputHandler) EndOfJob() {
 	// No matter what happens, we always want to reset our state to a fresh
 	// new job.
 	defer func() {
 		var err error
 		o.job, err = vprinter.New1403(o.font)
 		if err != nil {
-			log.Printf("ERROR: couldn't re-initialize virtual 1403: %v\n", err)
-			log.Printf("ERROR: application is probably in a bad state, please restart.\n")
+			log.Printf("ERROR: couldn't re-initialize virtual 1403: %v\n",
+				err)
+			log.Printf(
+				"ERROR: application is probably in a bad state, please restart.\n")
 		}
 	}()
 
-	filename := filepath.Join(o.outputDir, time.Now().UTC().Format("20060102T030405.pdf"))
+	filename := filepath.Join(o.outputDir,
+		time.Now().UTC().Format("20060102T030405.pdf"))
 
 	f, err := os.Create(filename)
 	if err != nil {
@@ -57,11 +81,11 @@ func (o *outputHandler) EndOfJob() {
 		return
 	}
 	defer f.Close()
-	err = o.job.EndJob(f)
+	n, err := o.job.EndJob(f)
 	if err != nil {
 		log.Printf("ERROR: couldn't write PDF output: %v\n", err)
 		return
 	}
 
-	log.Printf("INFO:  wrote PDF to %s\n", filename)
+	log.Printf("INFO:  wrote %d page PDF to %s\n", n, filename)
 }

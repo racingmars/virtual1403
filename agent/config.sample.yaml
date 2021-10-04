@@ -1,4 +1,31 @@
+# First, we need to know how to connect to your Hercules instance. Enter the
+# information for the sockdev printer device here:
 hercules_address: "127.0.0.1:1403"
+
+# mode may be "online" or "local". online sends the print job to a web
+# service to render and email you a PDF. local produces the PDF locally
+# and places it in the configured output directory.
+mode: "online" # or "local"
+
+
+### ONLINE MODE #############################################################
+#
+# When mode is "online", service_address and api_key are required, and should
+# come from the instructions on the service's web site.
+#
+service_address: "https://1403.bitnet.systems/print"
+api_key: "my-api-key-123"
+#
+#############################################################################
+
+
+### LOCAL MODE ##############################################################
+#
+# When mode is "local", the output directory is required. Optionally, you may
+# provide a font file to use in the PDFs. Leave font_file commented out to
+# use the default font.
+#
 output_directory: "pdfs"
-# Optional font file; uncomment to use your own font
-#font_file: "font-file-name.ttf"
+#font_file: "my-printer-font.ttf"
+#
+#############################################################################

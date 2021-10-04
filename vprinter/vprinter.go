@@ -41,8 +41,8 @@ type Job interface {
 
 	// EndJob instructs the virtual printer to end the job and write the
 	// output (e.g. the PDF of all lines and pages for this job) to the
-	// io.Writer.
-	EndJob(io.Writer) error
+	// io.Writer. Will return the total number of pages.
+	EndJob(io.Writer) (int, error)
 }
 
 // LoadFont will load a font file from path, verify that it is usable with the
