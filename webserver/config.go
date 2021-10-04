@@ -107,8 +107,9 @@ func (a *application) createAdmin(email string) error {
 	pwstring := hex.EncodeToString(pwbytes)
 
 	u := model.NewUser(email, pwstring)
-	u.IsAdmin = true
-	u.IsVerified = true
+	u.Admin = true
+	u.Verified = true
+	u.Enabled = true
 
 	err = a.db.SaveUser(u)
 	if err != nil {

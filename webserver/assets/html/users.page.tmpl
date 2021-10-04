@@ -1,0 +1,14 @@
+{{template "base" .}}
+
+{{define "title"}}Users{{end}}
+
+{{define "main"}}
+<table class="table">
+    <thead><tr><th>Email</th><th>Access Key</th></tr></thead>
+    <tbody>
+    {{range .}}
+        <tr><td>{{.Email}}</td><td>{{.AccessKey}}</td></tr>
+    {{end}}
+    </tbody>
+</table>
+{{end}}

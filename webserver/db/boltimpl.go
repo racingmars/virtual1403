@@ -20,6 +20,7 @@ package db
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/boltdb/bolt"
 
@@ -80,7 +81,7 @@ func (db *boltimpl) SaveUser(user model.User) error {
 		accessBucket := tx.Bucket([]byte(accessKeyBucketName))
 
 		// Does the user already exist?
-		olduserjson := userBucket.Get([]byte(user.Email))
+		olduserjson := userBucket.Get([]byte(strings.ToLower(user.Email)))
 		if olduserjson != nil {
 			// yes... let's grab the old access key so we can delete it
 			var olduser model.User
@@ -91,11 +92,12 @@ func (db *boltimpl) SaveUser(user model.User) error {
 		}
 
 		// Save the new user record and access key linked to the user
-		if err := userBucket.Put([]byte(user.Email), userjson); err != nil {
+		if err := userBucket.Put([]byte(strings.ToLower(user.Email)),
+			userjson); err != nil {
 			return err
 		}
 		if err := accessBucket.Put([]byte(user.AccessKey),
-			[]byte(user.Email)); err != nil {
+			[]byte(strings.ToLower(user.Email))); err != nil {
 			return err
 		}
 
@@ -107,7 +109,7 @@ func (db *boltimpl) GetUser(email string) (model.User, error) {
 	var user model.User
 	err := db.bdb.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(userBucketName))
-		v := b.Get([]byte(email))
+		v := b.Get([]byte(strings.ToLower(email)))
 		if v == nil {
 			return ErrNotFound
 		}
@@ -122,6 +124,30 @@ func (db *boltimpl) GetUser(email string) (model.User, error) {
 	}
 
 	return user, nil
+}
+
+func (db *boltimpl) GetUsers() ([]model.User, error) {
+	var users []model.User
+	err := db.bdb.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(userBucketName))
+		if err := b.ForEach(func(k, v []byte) error {
+			var user model.User
+			if err := json.Unmarshal(v, &user); err != nil {
+				return err
+			}
+			users = append(users, user)
+			return nil
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }
 
 func (db *boltimpl) GetUserForAccessKey(key string) (model.User, error) {
@@ -148,7 +174,7 @@ func (db *boltimpl) DeleteUser(email string) error {
 		userBucket := tx.Bucket([]byte(userBucketName))
 		accessBucket := tx.Bucket([]byte(accessKeyBucketName))
 
-		olduserjson := userBucket.Get([]byte(email))
+		olduserjson := userBucket.Get([]byte(strings.ToLower(email)))
 		if olduserjson == nil {
 			// no such user
 			return nil
@@ -161,7 +187,7 @@ func (db *boltimpl) DeleteUser(email string) error {
 
 		// Now we just delete access key and user
 		accessBucket.Delete([]byte(olduser.AccessKey))
-		userBucket.Delete([]byte(email))
+		userBucket.Delete([]byte(strings.ToLower(email)))
 
 		return nil
 	})

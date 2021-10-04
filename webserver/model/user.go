@@ -29,8 +29,9 @@ type User struct {
 	Email        string
 	PasswordHash string
 	AccessKey    string
-	IsAdmin      bool
-	IsVerified   bool
+	Admin        bool
+	Verified     bool
+	Enabled      bool
 }
 
 // NewUser is a convenience function to create a new user with the
@@ -38,6 +39,7 @@ type User struct {
 func NewUser(email, password string) User {
 	var u User
 	u.Email = email
+	u.Enabled = true
 	u.SetPassword(password)
 	u.GenerateAccessKey()
 	return u
@@ -68,7 +70,7 @@ func (u *User) CheckPassword(password string) bool {
 
 // GenerateAccessKey generates and sets a new random access key on the user.
 func (u *User) GenerateAccessKey() {
-	const numBytes = 128 / 8 // 128 bits
+	const numBytes = 256 / 8 // 256 bits
 	buf := make([]byte, numBytes)
 	n, err := rand.Read(buf)
 	if err != nil || n != numBytes {

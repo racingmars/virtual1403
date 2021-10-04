@@ -32,5 +32,6 @@ type DB interface {
 	SaveUser(user model.User) error
 	GetUser(email string) (model.User, error)
 	GetUserForAccessKey(key string) (model.User, error)
+	GetUsers() ([]model.User, error)
 	DeleteUser(email string) error
 }

@@ -21,22 +21,32 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
+	"time"
+
+	"github.com/golangcollege/sessions"
 
 	"github.com/racingmars/virtual1403/vprinter"
+	"github.com/racingmars/virtual1403/webserver/assets"
 	"github.com/racingmars/virtual1403/webserver/db"
 	"github.com/racingmars/virtual1403/webserver/mailer"
 )
 
 type application struct {
-	font       []byte
-	db         db.DB
-	mailconfig mailer.Config
+	font          []byte
+	db            db.DB
+	mailconfig    mailer.Config
+	session       *sessions.Session
+	templateCache map[string]*template.Template
 }
 
 //go:embed IBMPlexMono-Regular.ttf
 var defaultFont []byte
+
+// TODO: need to not hard-code this
+var secret = []byte("u46IpCV9y5Vlur8YvODJEhgOY8m9JVE4")
 
 func main() {
 	var app application
@@ -62,6 +72,12 @@ func main() {
 		app.font = defaultFont
 	}
 
+	templateCache, err := newTemplateCache()
+	if err != nil {
+		log.Fatalf("FATAL unable to load templates: %v", err)
+	}
+	app.templateCache = templateCache
+
 	app.db, err = db.NewDB(config.DatabaseFile)
 	if err != nil {
 		panic(err)
@@ -76,15 +92,19 @@ func main() {
 		}
 	}
 
+	app.session = sessions.New([]byte(secret))
+	app.session.Lifetime = 3 * time.Hour
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", home)
-	mux.HandleFunc("/print", app.printjob)
+	mux.Handle("/static/", http.FileServer(http.FS(assets.Content)))
+	mux.Handle("/", app.session.Enable(http.HandlerFunc(app.home)))
+	mux.Handle("/login", app.session.Enable(http.HandlerFunc(app.login)))
+	mux.Handle("/users", app.session.Enable(http.HandlerFunc(app.listUsers)))
+
+	// The print API -- not part of the UI
+	mux.Handle("/print", http.HandlerFunc(app.printjob))
 
 	log.Printf("Starting server on :%d", config.ListenPort)
 	err = http.ListenAndServe(fmt.Sprintf(":%d", config.ListenPort), mux)
 	log.Fatal(err)
-}
-
-func home(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello from virtual1403"))
 }

@@ -1,0 +1,147 @@
+{{template "base" .}}
+
+{{define "title"}}Welcome{{end}}
+
+{{define "main"}}
+<div class="columns">
+    <div class="column">
+        <section class="hero">
+            <div class="hero-body">
+                <p class="title">Sign in...</p>
+            </div>
+        </section>
+        {{with .loginError}}
+            <div class="notification is-danger">
+                {{.}}
+            </div>
+        {{end}}
+        <form method="post" action="login">
+            <div class="field is-horizontal">
+                <div class="field-label is-normal">
+                    <label class="label" for="login-email">Email</label>
+                </div>
+                <div class="field-body">
+                    <div class="field">
+                        <div class="control">
+                            <input class="input" type="text" name="email" id="login-email" placeholder="user@example.com" value="{{with .loginEmail}}{{.}}{{end}}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="field is-horizontal">
+                <div class="field-label is-normal">
+                    <label class="label" for="login-passwd">Password</label>
+                </div>
+                <div class="field-body">
+                    <div class="field">
+                        <div class="control">
+                            <input class="input" type="password" name="password" id="login-passwd" placeholder="Password">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="field is-horizontal">
+                <div class="field-label">
+                    <!-- Left empty for spacing -->
+                </div>
+                <div class="field-body">
+                    <div class="field">
+                        <div class="control">
+                            <input type="submit" class="button is-primary" value="Login">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="column">
+        <section class="hero">
+            <div class="hero-body">
+                <p class="title">...or sign up</p>
+            </div>
+        </section>
+        <form method="post" action="signup">
+            <div class="field is-horizontal">
+                <div class="field-label is-normal">
+                    <label class="label" for="signup-email">Email</label>
+                </div>
+                <div class="field-body">
+                    <div class="field">
+                        <div class="control">
+                            <input class="input" type="text" name="email" id="signup-email" placeholder="user@example.com">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="field is-horizontal">
+                <div class="field-label is-normal">
+                    <label class="label" for="signup-name">Name</label>
+                </div>
+                <div class="field-body">
+                    <div class="field">
+                        <div class="control">
+                            <input class="input" type="text" name="name" id="signup-name" placeholder="Alex Smith">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="field is-horizontal" id="website">
+                <div class="field-label is-normal">
+                    <label class="label" for="signup-website">Website (this is an anti-spam field, DO NOT fill in)</label>
+                </div>
+                <div class="field-body">
+                    <div class="field">
+                        <div class="control">
+                            <input class="input" type="text" name="website" id="signup-website" placeholder="This is an anti-spam field">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="field is-horizontal">
+                <div class="field-label is-normal">
+                    <label class="label" for="signup-passwd">Password</label>
+                </div>
+                <div class="field-body">
+                    <div class="field">
+                        <div class="control">
+                            <input class="input" type="password" name="password" id="signup-passwd" placeholder="Password">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="field is-horizontal">
+                <div class="field-label is-normal">
+                    <label class="label" for="signup-passwd-confirm">Confirm Password</label>
+                </div>
+                <div class="field-body">
+                    <div class="field">
+                        <div class="control">
+                            <input class="input" type="password" name="password-confirm" id="signup-passwd-confirm" placeholder="Password">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="field is-horizontal">
+                <div class="field-label">
+                    <!-- Left empty for spacing -->
+                </div>
+                <div class="field-body">
+                    <div class="field">
+                        <div class="control">
+                            <input type="submit" class="button is-primary" value="Create Account">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}
