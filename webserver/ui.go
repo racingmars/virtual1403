@@ -30,6 +30,8 @@ import (
 	"github.com/racingmars/virtual1403/webserver/model"
 )
 
+// home serves the home page with the login and signup forms. If the user is
+// already logged in, we redirect to the user's personal info page.
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
@@ -52,6 +54,8 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	app.render(w, r, "home.page.tmpl", responseVars)
 }
 
+// login handles user login requests and if successful sets the session cookie
+// user value to the logged in user's email address.
 func (app *application) login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -100,39 +104,21 @@ func (app *application) renderSignupError(w http.ResponseWriter,
 	})
 }
 
+// logout destroys the user's session cookie to log them out and sends them
+// back to the home page.
 func (app *application) logout(w http.ResponseWriter, r *http.Request) {
 	app.session.Destroy(r)
-	http.Redirect(w, r, "", http.StatusSeeOther)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 // This is the default page for logged-in users
-func (app *application) user(w http.ResponseWriter, r *http.Request) {
+func (app *application) userInfo(w http.ResponseWriter, r *http.Request) {
 	// Verify we have a logged in, valid user
-	username := app.session.GetString(r, "user")
-	if username == "" {
-		http.Redirect(w, r, "", http.StatusSeeOther)
-		return
-	}
-
-	u, err := app.db.GetUser(username)
-	if err == db.ErrNotFound {
-		log.Printf(
-			"INFO  user `%s` has a session cookie but the account no longer exists",
-			username)
+	u := app.checkLoggedInUser(r)
+	if u == nil {
+		// No logged in user
 		app.session.Destroy(r)
-		http.Redirect(w, r, "", http.StatusSeeOther)
-		return
-	}
-	if err != nil {
-		log.Printf("ERROR couldn't look up user `%s` in DB: %v", username,
-			err)
-		app.serverError(w, "Sorry, a database error has occurred")
-		return
-	}
-
-	if !u.Enabled {
-		app.session.Destroy(r)
-		app.renderLoginError(w, r, username, "Sorry, that account is disabled.")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -141,7 +127,7 @@ func (app *application) user(w http.ResponseWriter, r *http.Request) {
 		"name":            u.FullName,
 		"email":           u.Email,
 		"apiKey":          u.AccessKey,
-		"apiEndpoint":     app.apiEndpoint,
+		"apiEndpoint":     app.serverBaseURL + "/print",
 		"pageCount":       u.PageCount,
 		"jobCount":        u.JobCount,
 		"passwordError":   app.session.Get(r, "passwordError"),
@@ -171,65 +157,60 @@ func (app *application) regenkey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify we have a logged in, valid user
-	username := app.session.GetString(r, "user")
-	if username == "" {
-		// doesn't appear to be a logged-in user; clear session just to be
-		// safe and send the user to the login page.
+	u := app.checkLoggedInUser(r)
+	if u == nil {
+		// No logged in user
 		app.session.Destroy(r)
-		http.Redirect(w, r, "", http.StatusSeeOther)
-		return
-	}
-
-	u, err := app.db.GetUser(username)
-	if err == db.ErrNotFound {
-		log.Printf(
-			"INFO  user `%s` has a session cookie but the account no longer exists",
-			username)
-		app.session.Destroy(r)
-		http.Redirect(w, r, "", http.StatusSeeOther)
-		return
-	}
-	if err != nil {
-		log.Printf("ERROR couldn't look up user `%s` in DB: %v", username,
-			err)
-		app.serverError(w, "Sorry, a database error has occurred")
-		return
-	}
-
-	if !u.Enabled {
-		app.session.Destroy(r)
-		app.renderLoginError(w, r, username, "Sorry, that account is disabled.")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
 	// All checks passed... regenerate the key
 	u.GenerateAccessKey()
-	err = app.db.SaveUser(u)
+	err := app.db.SaveUser(*u)
 	if err != nil {
-		log.Printf("ERROR couldn't save user `%s` in DB: %v", username,
+		log.Printf("ERROR couldn't save user `%s` in DB: %v", u.Email,
 			err)
 		app.serverError(w, "Sorry, a database error has occurred")
 		return
 	}
 
-	log.Printf("INFO  %s generated a new access key", username)
+	log.Printf("INFO  %s generated a new access key", u.Email)
 	http.Redirect(w, r, "user", http.StatusSeeOther)
 }
 
+// listUsers provides logged-in administrators with a list of all users in the
+// database.
 func (app *application) listUsers(w http.ResponseWriter, r *http.Request) {
+	u := app.checkLoggedInUser(r)
+	if u == nil {
+		// No logged in user
+		app.session.Destroy(r)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Only display this page to administrators
+	if !u.Admin {
+		w.WriteHeader(http.StatusForbidden)
+		io.WriteString(w, "This page is only available to administrators.")
+		return
+	}
+
 	users, err := app.db.GetUsers()
 	if err != nil {
 		http.Error(w, "Internal Server Error", 500)
 		return
 	}
 
-	for i := range users {
-		users[i].AccessKey = url.QueryEscape(users[i].AccessKey)
-	}
+	log.Printf("INFO  %s accessed the users list page", u.Email)
 
 	app.render(w, r, "users.page.tmpl", users)
 }
 
+// signup is the HTTP POST handler for /signup, to create new user accounts.
+// If everything is okay, we will create the new user in an unverified state
+// and send the new email address the verification email.
 func (app *application) signup(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -290,7 +271,7 @@ func (app *application) signup(w http.ResponseWriter, r *http.Request) {
 	app.session.Put(r, "user", newuser.Email)
 
 	if err := mailer.SendVerificationCode(app.mailconfig, newuser.Email,
-		app.apiEndpoint+"/verify?token="+
+		app.serverBaseURL+"/verify?token="+
 			url.QueryEscape(newuser.AccessKey)); err != nil {
 		log.Printf("ERROR couldn't send verification email for %s: %v",
 			newuser.Email, err)
@@ -299,6 +280,9 @@ func (app *application) signup(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "user", http.StatusSeeOther)
 }
 
+// changePassword is the HTTP handler for POSTS to /changepassword for users
+// to change their password. We verify that a valid user is logged in, then
+// change the password if the old password checks out.
 func (app *application) changePassword(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -306,34 +290,11 @@ func (app *application) changePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify we have a logged in, valid user
-	username := app.session.GetString(r, "user")
-	if username == "" {
-		// doesn't appear to be a logged-in user; clear session just to be
-		// safe and send the user to the login page.
+	u := app.checkLoggedInUser(r)
+	if u == nil {
+		// No logged in user
 		app.session.Destroy(r)
-		http.Redirect(w, r, "", http.StatusSeeOther)
-		return
-	}
-
-	u, err := app.db.GetUser(username)
-	if err == db.ErrNotFound {
-		log.Printf(
-			"INFO  user `%s` has a session cookie but the account no longer exists",
-			username)
-		app.session.Destroy(r)
-		http.Redirect(w, r, "", http.StatusSeeOther)
-		return
-	}
-	if err != nil {
-		log.Printf("ERROR couldn't look up user `%s` in DB: %v", username,
-			err)
-		app.serverError(w, "Sorry, a database error has occurred")
-		return
-	}
-
-	if !u.Enabled {
-		app.session.Destroy(r)
-		app.renderLoginError(w, r, username, "Sorry, that account is disabled.")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -366,7 +327,7 @@ func (app *application) changePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u.SetPassword(newPassword)
-	if err := app.db.SaveUser(u); err != nil {
+	if err := app.db.SaveUser(*u); err != nil {
 		app.serverError(w, "Sorry, a database error has occurred")
 		return
 	}
@@ -377,6 +338,11 @@ func (app *application) changePassword(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "user", http.StatusSeeOther)
 }
 
+// verifyUser is the HTTP hander for /verify; we expect /verify?token=... to
+// verify a user after sending them the email verification link. If the
+// verification token belongs to an unverified account, we will set the
+// account to verified and generate a new token (which will be used as their
+// print API access token going forward).
 func (app *application) verifyUser(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
 	if token == "" {
@@ -413,4 +379,40 @@ func (app *application) verifyUser(w http.ResponseWriter, r *http.Request) {
 	app.session.Put(r, "verifySuccess", "Email address successfully verified.")
 	log.Printf("INFO  %s verified their account", u.Email)
 	http.Redirect(w, r, "user", http.StatusSeeOther)
+}
+
+// checkLoggedInUser checks if a user is logged in to the session in the HTTP
+// request r. If there is a valid session cookie with a username, we check
+// that the user still exists and isn't disabled. If everything is good, we
+// return a pointer to the logged-in user. If the user isn't logged in or
+// there is a problem, we return nil.
+func (app *application) checkLoggedInUser(r *http.Request) *model.User {
+	username := app.session.GetString(r, "user")
+	if username == "" {
+		return nil
+	}
+
+	user, err := app.db.GetUser(username)
+	if err == db.ErrNotFound {
+		log.Printf(
+			"INFO  user `%s` has a session cookie but the account no "+
+				"longer exists",
+			username)
+		return nil
+	}
+	if err != nil {
+		log.Printf("ERROR couldn't look up user `%s` in DB: %v", username,
+			err)
+		return nil
+	}
+
+	if !user.Enabled {
+		log.Printf(
+			"INFO  user `%s` has a session cookie but the account is disabled",
+			username)
+		return nil
+	}
+
+	// At this point, we have a valid, active logged-in user.
+	return &user
 }

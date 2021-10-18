@@ -114,6 +114,9 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Authentication failure", http.StatusUnauthorized)
 		return
 	}
+	if !user.Enabled {
+		http.Error(w, "User's account is disabled", http.StatusForbidden)
+	}
 	if !user.Verified {
 		http.Error(w, "User's email address has not been verified",
 			http.StatusForbidden)

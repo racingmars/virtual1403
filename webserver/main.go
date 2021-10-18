@@ -38,7 +38,7 @@ type application struct {
 	font          []byte
 	db            db.DB
 	mailconfig    mailer.Config
-	apiEndpoint   string
+	serverBaseURL string
 	session       *sessions.Session
 	templateCache map[string]*template.Template
 }
@@ -93,7 +93,7 @@ func main() {
 		}
 	}
 
-	app.apiEndpoint = config.PrintURL
+	app.serverBaseURL = config.BaseURL
 
 	app.session = sessions.New([]byte(secret))
 	app.session.Lifetime = 3 * time.Hour
@@ -106,9 +106,10 @@ func main() {
 	mux.Handle("/changepassword", app.session.Enable(http.HandlerFunc(
 		app.changePassword)))
 	mux.Handle("/logout", app.session.Enable(http.HandlerFunc(app.logout)))
-	mux.Handle("/user", app.session.Enable(http.HandlerFunc(app.user)))
+	mux.Handle("/user", app.session.Enable(http.HandlerFunc(app.userInfo)))
 	mux.Handle("/regenkey", app.session.Enable(http.HandlerFunc(app.regenkey)))
-	mux.Handle("/users", app.session.Enable(http.HandlerFunc(app.listUsers)))
+	mux.Handle("/admin/users", app.session.Enable(http.HandlerFunc(
+		app.listUsers)))
 	mux.Handle("/verify", app.session.Enable(http.HandlerFunc(app.verifyUser)))
 
 	// The print API -- not part of the UI

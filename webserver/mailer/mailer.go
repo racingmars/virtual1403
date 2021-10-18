@@ -40,7 +40,9 @@ type Config struct {
 	Password    string `yaml:"password"`
 }
 
-func Send(config Config, to, subject, body, filename string, attachment []byte) error {
+func Send(config Config, to, subject, body, filename string,
+	attachment []byte) error {
+
 	var buf bytes.Buffer
 
 	m := multipart.NewWriter(&buf)
@@ -103,9 +105,13 @@ func SendVerificationCode(config Config, to, verifyURL string) error {
 	fmt.Fprintf(&buf, "Content-Type: text/plain\r\n")
 	fmt.Fprintf(&buf, "\r\n")
 
-	io.WriteString(&buf, "You (hopefully) have signed up for a Virtual1403 account. To activate your account, please click the link below:\r\n\r\n")
+	io.WriteString(&buf,
+		"You (hopefully) have signed up for a Virtual1403 account. To "+
+			"activate\r\nyour account, please click the link below:\r\n\r\n")
 	io.WriteString(&buf, verifyURL+"\r\n\r\n")
-	io.WriteString(&buf, fmt.Sprintf("If you were not the one to sign up with this email address (%s), no action is required; the account will remain inactive and unverified.\r\n", to))
+	io.WriteString(&buf, "If you were not the one to sign up with this email "+
+		"address, no action is\r\nrequired; the account will remain inactive "+
+		"and unverified.\r\n")
 
 	auth := smtp.PlainAuth("", config.Username, config.Password, config.Server)
 	err := smtp.SendMail(fmt.Sprintf("%s:%d", config.Server, config.Port),

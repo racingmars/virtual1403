@@ -36,7 +36,7 @@ type ServerConfig struct {
 	CreateAdmin  string        `yaml:"create_admin"`
 	FontFile     string        `yaml:"font_file"`
 	ListenPort   int           `yaml:"listen_port"`
-	PrintURL     string        `yaml:"print_api_url"`
+	BaseURL      string        `yaml:"server_base_url"`
 	MailConfig   mailer.Config `yaml:"mail_config"`
 }
 
@@ -64,8 +64,8 @@ func readConfig(path string) (ServerConfig, []error) {
 			c.ListenPort))
 	}
 
-	if c.PrintURL == "" {
-		errs = append(errs, fmt.Errorf("print_api_url is required"))
+	if c.BaseURL == "" {
+		errs = append(errs, fmt.Errorf("server_base_url is required"))
 	}
 
 	if !mailer.ValidateAddress(c.MailConfig.FromAddress) {
