@@ -44,7 +44,7 @@ type configuration struct {
 	HerculesAddress string `yaml:"hercules_address"`
 	Mode            string `yaml:"mode"`
 	ServiceAddress  string `yaml:"service_address"`
-	APIKey          string `yaml:"api_key"`
+	APIKey          string `yaml:"access_key"`
 	OutputDir       string `yaml:"output_directory"`
 	FontFile        string `yaml:"font_file"`
 }

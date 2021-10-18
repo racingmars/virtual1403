@@ -1,0 +1,123 @@
+{{template "base" .}}
+
+{{define "title"}}Your Account{{end}}
+
+{{define "main"}}
+
+<div class="content">
+<p>Welcome {{.name}} ({{.email}}). You have printed a total of {{.pageCount}} page{{if ne .pageCount 1}}s{{end}} over {{.jobCount}} job{{ if ne .jobCount 1}}s{{end}}!</p>
+
+{{ with .verifySuccess }}
+<div class="columns">
+  <div class="column is-three-fifths is-offset-one-fifth">
+    <div class="message is-success">
+    <div class="message-header">Email verification success</div>
+    <div class="message-body">
+        <p>{{ . }}<p>
+    </div>
+    </div>
+    </div>
+    </div>
+{{ end }}
+
+{{ if .verified }}
+    <p>Your access key is <code>{{.apiKey}}</code></p>
+    <p><form method="post" action="regenkey">
+        <input class="button is-warning" type="submit" value="Generate new access key">
+    </form></p>
+    <p>To begin printing, grab an <a href="https://github.com/racingmars/virtual1403/releases">agent for your platform</a> and place the following in the <code>config.yaml</code> file:</p>
+    <p><pre># Change to point to your Hercules sockdev printer
+hercules_address: "127.0.0.1:1403"
+
+mode: "online"
+service_address: "{{.apiEndpoint}}"
+access_key: "{{.apiKey}}"</pre></p>
+    </div>
+{{ else }}
+<div class="columns">
+  <div class="column is-three-fifths is-offset-one-fifth">
+    <div class="message is-warning">
+    <div class="message-header">Email verification required</div>
+    <div class="message-body">
+        <p class="is-size-4">Your email address needs to be verified. Please click on the link in the verification email we sent when you signed up for your account.<p>
+        <p><a class="button is-warning" href="resend">Re-send verification email</a></p>
+    </div>
+    </div>
+    </div>
+    </div>
+{{ end }}
+
+<div class="columns">
+<div class="column">
+<h3 class="subtitle">Change password</h3>
+{{with .passwordError}}
+    <div class="notification is-danger">
+        {{.}}
+    </div>
+{{end}}
+{{with .passwordSuccess}}
+    <div class="notification is-success">
+        {{.}}
+    </div>
+{{end}}
+<form method="post" action="changepassword">
+    <div class="field is-horizontal">
+        <div class="field-label is-normal">
+            <label class="label" for="login-passwd">Current Password</label>
+        </div>
+        <div class="field-body">
+            <div class="field">
+                <div class="control">
+                    <input class="input" type="password" name="password" id="login-passwd" placeholder="Password">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="field is-horizontal">
+        <div class="field-label is-normal">
+            <label class="label" for="new-passwd">New Password</label>
+        </div>
+        <div class="field-body">
+            <div class="field">
+                <div class="control">
+                    <input class="input" type="password" name="new-password" id="new-passwd" placeholder="Password">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="field is-horizontal">
+        <div class="field-label is-normal">
+            <label class="label" for="new-passwd2">Confirm New Password</label>
+        </div>
+        <div class="field-body">
+            <div class="field">
+                <div class="control">
+                    <input class="input" type="password" name="new-password2" id="new-passwd2" placeholder="Password">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+    <div class="field is-horizontal">
+        <div class="field-label">
+            <!-- Left empty for spacing -->
+        </div>
+        <div class="field-body">
+            <div class="field">
+                <div class="control">
+                    <input type="submit" class="button is-primary" value="Change Password">
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+</div>
+<div class="column"></div>
+</div>
+
+<div class="block"><a class="button is-primary" href="logout">Logout</a></div>
+
+{{end}}

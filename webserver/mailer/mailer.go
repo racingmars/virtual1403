@@ -92,8 +92,33 @@ func Send(config Config, to, subject, body, filename string, attachment []byte) 
 	return nil
 }
 
+func SendVerificationCode(config Config, to, verifyURL string) error {
+	var buf bytes.Buffer
+
+	fmt.Fprintf(&buf, "To: %s\r\n", to)
+	fmt.Fprintf(&buf, "From: %s\r\n", config.FromAddress)
+	fmt.Fprintf(&buf, "Subject: virtual1403 email verification\r\n")
+	fmt.Fprintf(&buf, "Date: %s\r\n", time.Now().Format(time.RFC822Z))
+	fmt.Fprintf(&buf, "MIME-version: 1.0\r\n")
+	fmt.Fprintf(&buf, "Content-Type: text/plain\r\n")
+	fmt.Fprintf(&buf, "\r\n")
+
+	io.WriteString(&buf, "You (hopefully) have signed up for a Virtual1403 account. To activate your account, please click the link below:\r\n\r\n")
+	io.WriteString(&buf, verifyURL+"\r\n\r\n")
+	io.WriteString(&buf, fmt.Sprintf("If you were not the one to sign up with this email address (%s), no action is required; the account will remain inactive and unverified.\r\n", to))
+
+	auth := smtp.PlainAuth("", config.Username, config.Password, config.Server)
+	err := smtp.SendMail(fmt.Sprintf("%s:%d", config.Server, config.Port),
+		auth, config.FromAddress, []string{to}, buf.Bytes())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // from https://www.emailregex.com/
-var mailRegexp = regexp.MustCompile(`(?:[a-z0-9!#$%&'*+/=?^_\x60{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_\x60{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])`)
+var mailRegexp = regexp.MustCompile(`^(?:[a-z0-9!#$%&'*+/=?^_` + "`" + `{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_` + "`" + `{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])$`)
 
 // ValidateAddress will return true if the email address appears to be valid.
 func ValidateAddress(email string) bool {

@@ -10,6 +10,11 @@
                 <p class="title">Sign in...</p>
             </div>
         </section>
+        {{with .verifySuccess}}
+            <div class="notification is-success">
+                {{.}} You may now log in and begin using the service.
+            </div>
+        {{end}}
         {{with .loginError}}
             <div class="notification is-danger">
                 {{.}}
@@ -63,6 +68,12 @@
                 <p class="title">...or sign up</p>
             </div>
         </section>
+
+        {{with .signupError}}
+            <div class="notification is-danger">
+                {{.}}
+            </div>
+        {{end}}
         <form method="post" action="signup">
             <div class="field is-horizontal">
                 <div class="field-label is-normal">
@@ -71,7 +82,7 @@
                 <div class="field-body">
                     <div class="field">
                         <div class="control">
-                            <input class="input" type="text" name="email" id="signup-email" placeholder="user@example.com">
+                            <input class="input" type="text" name="email" id="signup-email" placeholder="user@example.com" value="{{with .signupEmail}}{{.}}{{end}}">
                         </div>
                     </div>
                 </div>
@@ -84,7 +95,7 @@
                 <div class="field-body">
                     <div class="field">
                         <div class="control">
-                            <input class="input" type="text" name="name" id="signup-name" placeholder="Alex Smith">
+                            <input class="input" type="text" name="name" id="signup-name" placeholder="Alex Smith" value="{{with .signupName}}{{.}}{{end}}">
                         </div>
                     </div>
                 </div>

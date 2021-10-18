@@ -51,7 +51,7 @@ func main() {
 	}
 	req.Header.Set("Content-Encoding", "zstd")
 	req.Header.Set("Content-Type", "text/x-print-job")
-	req.Header.Set("Authorization", "Bearer sJOuFKzVaIKnJBJrrsmv2w==")
+	req.Header.Set("Authorization", "Bearer yYb+9XgZ4PpNKFQKOjNf+TS5q67WYdL81hnM0H3k/7E=")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

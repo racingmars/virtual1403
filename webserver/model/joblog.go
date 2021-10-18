@@ -1,4 +1,6 @@
-package db
+package model
+
+import "time"
 
 // Copyright 2021 Matthew R. Wilson <mwilson@mattwilson.org>
 //
@@ -18,21 +20,9 @@ package db
 // You should have received a copy of the GNU General Public License
 // along with virtual1403. If not, see <https://www.gnu.org/licenses/>.
 
-import (
-	"errors"
-
-	"github.com/racingmars/virtual1403/webserver/model"
-)
-
-var ErrNotFound = errors.New("not found")
-
-type DB interface {
-	Close() error
-
-	SaveUser(user model.User) error
-	GetUser(email string) (model.User, error)
-	GetUserForAccessKey(key string) (model.User, error)
-	GetUsers() ([]model.User, error)
-	DeleteUser(email string) error
-	LogJob(email string, pages int) error
+type JobLogEntry struct {
+	ID    uint64
+	Email string
+	Time  time.Time
+	Pages int
 }

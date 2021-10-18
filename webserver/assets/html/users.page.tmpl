@@ -1,13 +1,29 @@
 {{template "base" .}}
 
-{{define "title"}}Users{{end}}
+{{define "title"}}Admin — Users{{end}}
 
 {{define "main"}}
 <table class="table">
-    <thead><tr><th>Email</th><th>Access Key</th></tr></thead>
+    <thead><tr>
+        <th></th>
+        <th>Email</th>
+        <th>Access Key</th>
+        <th>Name</th>
+        <th>Jobs</th>
+        <th>Pages</th>
+        <th>Last Job <span class="is-size-7">(UTC)</span></th>
+    </tr></thead>
     <tbody>
     {{range .}}
-        <tr><td>{{.Email}}</td><td>{{.AccessKey}}</td></tr>
+        <tr>
+            <td><a href="edituser?email={{.Email}}">Edit</a></td>
+            <td>{{.Email}}</td>
+            <td>{{.AccessKey}}</td>
+            <td>{{.FullName}}</td>
+            <td>{{.JobCount}}</td>
+            <td>{{.PageCount}}</td>
+            <td>{{.LastJob.Format "2006-01-02 15:04:05"}}</td>
+        </tr>
     {{end}}
     </tbody>
 </table>

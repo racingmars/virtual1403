@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	font, err := loadFontData("../agent/IBMPlexMono-Regular.ttf")
+	font, err := loadFontData("../fonts/1403VintageMonoLimited-Regular.ttf")
 	if err != nil {
 		panic(err)
 	}

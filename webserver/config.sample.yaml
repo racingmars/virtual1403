@@ -5,6 +5,11 @@ create_admin: admin@example.com
 # font_file is an optional font file to use
 #font_file: font.ttf
 
+# print_api_url is the URL for the print API endpoint on this server.
+# It should be the server's base URL plus "/print", e.g.:
+# https://my.server.com/print
+print_api_url: https://localhost:4444/print
+
 mail_config:
   from_address: virtual.1403@example.com
   server: smtp.example.com

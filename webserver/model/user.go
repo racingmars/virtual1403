@@ -21,6 +21,7 @@ package model
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -29,9 +30,13 @@ type User struct {
 	Email        string
 	PasswordHash string
 	AccessKey    string
+	FullName     string
 	Admin        bool
 	Verified     bool
 	Enabled      bool
+	JobCount     int
+	PageCount    int
+	LastJob      time.Time
 }
 
 // NewUser is a convenience function to create a new user with the

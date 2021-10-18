@@ -36,6 +36,7 @@ type ServerConfig struct {
 	CreateAdmin  string        `yaml:"create_admin"`
 	FontFile     string        `yaml:"font_file"`
 	ListenPort   int           `yaml:"listen_port"`
+	PrintURL     string        `yaml:"print_api_url"`
 	MailConfig   mailer.Config `yaml:"mail_config"`
 }
 
@@ -61,6 +62,10 @@ func readConfig(path string) (ServerConfig, []error) {
 	if c.ListenPort < 1 || c.ListenPort > 65535 {
 		errs = append(errs, fmt.Errorf("port number %d is invalid",
 			c.ListenPort))
+	}
+
+	if c.PrintURL == "" {
+		errs = append(errs, fmt.Errorf("print_api_url is required"))
 	}
 
 	if !mailer.ValidateAddress(c.MailConfig.FromAddress) {
@@ -107,6 +112,7 @@ func (a *application) createAdmin(email string) error {
 	pwstring := hex.EncodeToString(pwbytes)
 
 	u := model.NewUser(email, pwstring)
+	u.FullName = "Administrator"
 	u.Admin = true
 	u.Verified = true
 	u.Enabled = true

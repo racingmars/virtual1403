@@ -14,7 +14,7 @@ mode: "online" # or "local"
 # come from the instructions on the service's web site.
 #
 service_address: "https://1403.bitnet.systems/print"
-api_key: "my-api-key-123"
+access_key: "my-api-key-123"
 #
 #############################################################################
 

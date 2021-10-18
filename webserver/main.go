@@ -38,6 +38,7 @@ type application struct {
 	font          []byte
 	db            db.DB
 	mailconfig    mailer.Config
+	apiEndpoint   string
 	session       *sessions.Session
 	templateCache map[string]*template.Template
 }
@@ -92,6 +93,8 @@ func main() {
 		}
 	}
 
+	app.apiEndpoint = config.PrintURL
+
 	app.session = sessions.New([]byte(secret))
 	app.session.Lifetime = 3 * time.Hour
 
@@ -99,12 +102,19 @@ func main() {
 	mux.Handle("/static/", http.FileServer(http.FS(assets.Content)))
 	mux.Handle("/", app.session.Enable(http.HandlerFunc(app.home)))
 	mux.Handle("/login", app.session.Enable(http.HandlerFunc(app.login)))
+	mux.Handle("/signup", app.session.Enable(http.HandlerFunc(app.signup)))
+	mux.Handle("/changepassword", app.session.Enable(http.HandlerFunc(
+		app.changePassword)))
+	mux.Handle("/logout", app.session.Enable(http.HandlerFunc(app.logout)))
+	mux.Handle("/user", app.session.Enable(http.HandlerFunc(app.user)))
+	mux.Handle("/regenkey", app.session.Enable(http.HandlerFunc(app.regenkey)))
 	mux.Handle("/users", app.session.Enable(http.HandlerFunc(app.listUsers)))
+	mux.Handle("/verify", app.session.Enable(http.HandlerFunc(app.verifyUser)))
 
 	// The print API -- not part of the UI
 	mux.Handle("/print", http.HandlerFunc(app.printjob))
 
-	log.Printf("Starting server on :%d", config.ListenPort)
+	log.Printf("INFO  Starting server on :%d", config.ListenPort)
 	err = http.ListenAndServe(fmt.Sprintf(":%d", config.ListenPort), mux)
 	log.Fatal(err)
 }

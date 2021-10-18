@@ -34,7 +34,7 @@ func (app *application) render(w http.ResponseWriter, r *http.Request,
 
 	ts, ok := app.templateCache[name]
 	if !ok {
-		app.serverError(w, fmt.Errorf("the template %s does not exists",
+		app.serverError(w, fmt.Sprintf("the template %s does not exist",
 			name))
 		return
 	}
@@ -43,15 +43,15 @@ func (app *application) render(w http.ResponseWriter, r *http.Request,
 
 	err := ts.Execute(buf, td)
 	if err != nil {
-		app.serverError(w, err)
+		app.serverError(w, err.Error())
 		return
 	}
 
 	buf.WriteTo(w)
 }
 
-func (app *application) serverError(w http.ResponseWriter, err error) {
-	trace := fmt.Sprintf("%s\n%s", err.Error(), debug.Stack())
+func (app *application) serverError(w http.ResponseWriter, err string) {
+	trace := fmt.Sprintf("%s\n%s", err, debug.Stack())
 	log.Println(trace)
 
 	http.Error(w, http.StatusText(http.StatusInternalServerError),

@@ -19,8 +19,10 @@ package db
 // along with virtual1403. If not, see <https://www.gnu.org/licenses/>.
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"strings"
+	"time"
 
 	"github.com/boltdb/bolt"
 
@@ -34,6 +36,8 @@ type boltimpl struct {
 const (
 	userBucketName      = "users"
 	accessKeyBucketName = "access_keys"
+	jobLogBucketName    = "job_log"
+	jobLogUserIndexName = "job_log_user_index"
 )
 
 func NewDB(path string) (DB, error) {
@@ -50,6 +54,14 @@ func NewDB(path string) (DB, error) {
 		}
 		if _, err := tx.CreateBucketIfNotExists(
 			[]byte(accessKeyBucketName)); err != nil {
+			return err
+		}
+		if _, err := tx.CreateBucketIfNotExists(
+			[]byte(jobLogBucketName)); err != nil {
+			return err
+		}
+		if _, err := tx.CreateBucketIfNotExists(
+			[]byte(jobLogUserIndexName)); err != nil {
 			return err
 		}
 		return nil
@@ -191,4 +203,77 @@ func (db *boltimpl) DeleteUser(email string) error {
 
 		return nil
 	})
+}
+
+func (db *boltimpl) LogJob(email string, pages int) error {
+	err := db.bdb.Update(func(tx *bolt.Tx) error {
+		userBucket := tx.Bucket([]byte(userBucketName))
+		logBucket := tx.Bucket([]byte(jobLogBucketName))
+		logIdxBucket := tx.Bucket([]byte(jobLogUserIndexName))
+
+		userjson := userBucket.Get([]byte(strings.ToLower(email)))
+		if userjson == nil {
+			// no such user
+			return ErrNotFound
+		}
+
+		var user model.User
+		if err := json.Unmarshal(userjson, &user); err != nil {
+			return err
+		}
+
+		user.JobCount++
+		user.PageCount += pages
+		user.LastJob = time.Now().UTC()
+
+		// Save user back to DB
+		userjson, err := json.Marshal(&user)
+		if err != nil {
+			return err
+		}
+		if err := userBucket.Put([]byte(strings.ToLower(email)),
+			userjson); err != nil {
+			return err
+		}
+
+		// Log the job
+		nextID, err := logBucket.NextSequence()
+		if err != nil {
+			return err
+		}
+		logentry := model.JobLogEntry{
+			ID:    nextID,
+			Email: user.Email,
+			Pages: pages,
+			Time:  user.LastJob,
+		}
+		logentryjson, err := json.Marshal(&logentry)
+		if err != nil {
+			return err
+		}
+		logID := make([]byte, 64/8) // 64-bit uint
+		binary.PutUvarint(logID, nextID)
+		logBucket.Put(logID, logentryjson)
+
+		// Also maintain an index into the job log by user. The key is the
+		// username (email), followed by a null byte (0), followed by the
+		// 64-bit job log ID. There is no value, since the key itself serves
+		// as a pointer to the job log entry.
+		var indexEntry []byte
+		indexEntry = append(indexEntry, []byte(user.Email)...)
+		indexEntry = append(indexEntry, 0)
+		indexEntry = append(indexEntry, logID...)
+		err = logIdxBucket.Put(indexEntry, nil)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
