@@ -1,0 +1,22 @@
+{{template "base" .}}
+
+{{define "title"}}Admin — 100 Most Recent Jobs{{end}}
+
+{{define "main"}}
+<table class="table">
+    <thead><tr>
+        <th>Time <span class="is-size-7">(UTC)</span></th>
+        <th>Email</th>
+        <th>Pages</th>
+    </tr></thead>
+    <tbody>
+    {{range .}}
+        <tr>
+            <td>{{.Time.Format "2006-01-02 15:04:05"}}</td>
+            <td><a href="edituser?email={{.Email}}">{{.Email}}</a></td>
+            <td>{{.Pages}}</td>
+        </tr>
+    {{end}}
+    </tbody>
+</table>
+{{end}}

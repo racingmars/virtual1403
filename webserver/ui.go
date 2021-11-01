@@ -122,6 +122,13 @@ func (app *application) userInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get 10 most recent jobs the user printed
+	joblog, err := app.db.GetUserJobLog(u.Email, 10)
+	if err != nil {
+		log.Printf("ERR  db error getting user joblog for %s: %v", u.Email, err)
+		// We'll allow the page to render, it'll just have an empty job log
+	}
+
 	responseValues := map[string]interface{}{
 		"verified":        u.Verified,
 		"name":            u.FullName,
@@ -133,6 +140,7 @@ func (app *application) userInfo(w http.ResponseWriter, r *http.Request) {
 		"passwordError":   app.session.Get(r, "passwordError"),
 		"passwordSuccess": app.session.Get(r, "passwordSuccess"),
 		"verifySuccess":   app.session.Get(r, "verifySuccess"),
+		"joblog":          joblog,
 	}
 
 	if responseValues["passwordError"] != nil {
@@ -206,6 +214,35 @@ func (app *application) listUsers(w http.ResponseWriter, r *http.Request) {
 	log.Printf("INFO  %s accessed the users list page", u.Email)
 
 	app.render(w, r, "users.page.tmpl", users)
+}
+
+// listJobs provides logged-in administrators with a list of the 100 most
+// recent jobs.
+func (app *application) listJobs(w http.ResponseWriter, r *http.Request) {
+	u := app.checkLoggedInUser(r)
+	if u == nil {
+		// No logged in user
+		app.session.Destroy(r)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Only display this page to administrators
+	if !u.Admin {
+		w.WriteHeader(http.StatusForbidden)
+		io.WriteString(w, "This page is only available to administrators.")
+		return
+	}
+
+	jobs, err := app.db.GetJobLog(100)
+	if err != nil {
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
+	log.Printf("INFO  %s accessed the job log page", u.Email)
+
+	app.render(w, r, "jobs.page.tmpl", jobs)
 }
 
 // signup is the HTTP POST handler for /signup, to create new user accounts.

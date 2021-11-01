@@ -19,6 +19,7 @@ package db
 // along with virtual1403. If not, see <https://www.gnu.org/licenses/>.
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"strings"
@@ -201,6 +202,8 @@ func (db *boltimpl) DeleteUser(email string) error {
 		accessBucket.Delete([]byte(olduser.AccessKey))
 		userBucket.Delete([]byte(strings.ToLower(email)))
 
+		// TODO: should we delete job log entries for this user too?
+
 		return nil
 	})
 }
@@ -256,11 +259,11 @@ func (db *boltimpl) LogJob(email string, pages int) error {
 		logBucket.Put(logID, logentryjson)
 
 		// Also maintain an index into the job log by user. The key is the
-		// username (email), followed by a null byte (0), followed by the
-		// 64-bit job log ID. There is no value, since the key itself serves
-		// as a pointer to the job log entry.
+		// lowercase username (email), followed by a null byte (0), followed
+		// by the 64-bit job log ID. There is no value, since the key itself
+		// serves as a pointer to the job log entry.
 		var indexEntry []byte
-		indexEntry = append(indexEntry, []byte(user.Email)...)
+		indexEntry = append(indexEntry, []byte(strings.ToLower(user.Email))...)
 		indexEntry = append(indexEntry, 0)
 		indexEntry = append(indexEntry, logID...)
 		err = logIdxBucket.Put(indexEntry, nil)
@@ -276,4 +279,96 @@ func (db *boltimpl) LogJob(email string, pages int) error {
 	}
 
 	return nil
+}
+
+func (db *boltimpl) GetUserJobLog(email string, size int) (
+	[]model.JobLogEntry, error) {
+
+	results := make([]model.JobLogEntry, 0, size)
+
+	err := db.bdb.View(func(tx *bolt.Tx) error {
+		logBucket := tx.Bucket([]byte(jobLogBucketName))
+		logIdxBucket := tx.Bucket([]byte(jobLogUserIndexName))
+
+		// The log index key is the lowercase username followed by null byte
+		// (0) followed by the 64-bit log job id.
+
+		// We want to get job log entries in reverse (newest first) order, so
+		// we will seek just past where the last entry for this user should be
+		// (instead of email + null byte, it will be email + byte value 1),
+		// then work backwards. If we get a null key as the first key after
+		// the user, then there are no entries following the entries for this
+		// user, so we'll seek to the end of the index and work backward.
+
+		c := logIdxBucket.Cursor()
+		id := []byte(strings.ToLower(email))
+		id = append(id, 1)
+		k, _ := c.Seek(id)
+		if k == nil {
+			k, _ = c.Last()
+		} else {
+			k, _ = c.Prev()
+		}
+
+		// *if* any index entries exist for this user, the cursor is now
+		// positioned on the last of them and k contains the key
+		id = []byte(strings.ToLower(email))
+		id = append(id, 0)
+
+		// id now contains the *actual* key prefix for index entries for this
+		// user. We'll iterate backwards through the index as long as we are
+		// still on a key that begins with the user's ID.
+		for k != nil && bytes.HasPrefix(k, id) {
+
+			// Only return as many rows as requested
+			if len(results) == size {
+				break
+			}
+
+			entryid := bytes.TrimPrefix(k, id)
+			logentryjson := logBucket.Get(entryid)
+			var logentry model.JobLogEntry
+			if err := json.Unmarshal(logentryjson, &logentry); err != nil {
+				return err
+			}
+			results = append(results, logentry)
+
+			// Move back one more row
+			k, _ = c.Prev()
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+func (db *boltimpl) GetJobLog(size int) ([]model.JobLogEntry, error) {
+	results := make([]model.JobLogEntry, 0, size)
+	err := db.bdb.View(func(tx *bolt.Tx) error {
+		logBucket := tx.Bucket([]byte(jobLogBucketName))
+		c := logBucket.Cursor()
+
+		for k, v := c.Last(); k != nil; k, v = c.Prev() {
+			var job model.JobLogEntry
+			if err := json.Unmarshal(v, &job); err != nil {
+				return err
+			}
+			results = append(results, job)
+			if len(results) == size {
+				break
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }

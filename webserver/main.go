@@ -110,6 +110,8 @@ func main() {
 	mux.Handle("/regenkey", app.session.Enable(http.HandlerFunc(app.regenkey)))
 	mux.Handle("/admin/users", app.session.Enable(http.HandlerFunc(
 		app.listUsers)))
+	mux.Handle("/admin/jobs", app.session.Enable(http.HandlerFunc(
+		app.listJobs)))
 	mux.Handle("/verify", app.session.Enable(http.HandlerFunc(app.verifyUser)))
 
 	// The print API -- not part of the UI

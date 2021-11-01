@@ -27,12 +27,37 @@ import (
 var ErrNotFound = errors.New("not found")
 
 type DB interface {
+	// Close will close the database.
 	Close() error
 
+	// SaveUser saves a new user, or updates an existing user, identified by
+	// user.Email.
 	SaveUser(user model.User) error
+
+	// GetUser retrieves a user from the database by email.
 	GetUser(email string) (model.User, error)
+
+	// GetUserForAccessKey returns the user with the provided access key.
 	GetUserForAccessKey(key string) (model.User, error)
+
+	// GetUsers returns all users in the database.
 	GetUsers() ([]model.User, error)
+
+	// DeleteUser deletes the user with  the provided email address.
 	DeleteUser(email string) error
+
+	// LogJob will record that a job was just processed for the user with the
+	// provided email address. This will add to the job log and update the
+	// user's record with the last job time and increase the job count for the
+	// user.
 	LogJob(email string, pages int) error
+
+	// GetUserJobLog returns up to size rows from the job log for the user
+	// with the provided email address. Jobs are returned in descending order
+	// of time.
+	GetUserJobLog(email string, size int) ([]model.JobLogEntry, error)
+
+	// GetJobLog returns up to size rows from the job log in descending order
+	// of time.
+	GetJobLog(size int) ([]model.JobLogEntry, error)
 }

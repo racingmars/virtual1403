@@ -115,7 +115,22 @@ access_key: "{{.apiKey}}"</pre></p>
     </div>
 </form>
 </div>
-<div class="column"></div>
+<div class="column">
+<h2 class="subtitle">Recent print jobs</h2>
+<table class="table">
+    <thead>
+        <tr><th>Time <span class="is-size-7">(UTC)</span></th><th>Pages</th></tr>
+    </thead>
+    <tbody>
+        {{range .joblog}}
+            <tr>
+                <td>{{.Time.Format "2006-01-02 15:04:05"}}</td>
+                <td>{{ .Pages }}</td>
+            </tr>
+        {{ end }}
+    </tbody>
+</table>
+</div>
 </div>
 
 <div class="block"><a class="button is-primary" href="logout">Logout</a></div>
