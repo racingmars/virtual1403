@@ -27,6 +27,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/klauspost/compress/zstd"
@@ -171,10 +172,18 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	attachmentName := fmt.Sprintf("printout-%d.pdf",
+		time.Now().UTC().UnixMilli())
+
 	err = mailer.Send(a.mailconfig, user.Email,
 		"Printout for your job",
-		"The intern in the machine room has carefully collated your job and prepared it for delivery. Please find it attached to this message.\r\n",
-		"printout.pdf", pdfBuffer.Bytes())
+		"The intern in the machine room has carefully collated your job and "+
+			"prepared it for delivery. Please find it attached to this "+
+			"message.\r\n\r\n"+
+			"The font used in the attached PDF is 1403 Vintage Mono from "+
+			"Slanted Hall, used under license. "+
+			"<https://1403.slantedhall.com/>\r\n",
+		attachmentName, pdfBuffer.Bytes())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
