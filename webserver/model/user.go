@@ -27,16 +27,17 @@ import (
 )
 
 type User struct {
-	Email        string
-	PasswordHash string
-	AccessKey    string
-	FullName     string
-	Admin        bool
-	Verified     bool
-	Enabled      bool
-	JobCount     int
-	PageCount    int
-	LastJob      time.Time
+	Email                 string
+	PasswordHash          string
+	AccessKey             string
+	FullName              string
+	Admin                 bool
+	Verified              bool
+	Enabled               bool
+	JobCount              int
+	PageCount             int
+	LastJob               time.Time
+	LastVerificationEmail time.Time
 }
 
 // NewUser is a convenience function to create a new user with the

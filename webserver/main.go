@@ -112,6 +112,7 @@ func main() {
 		app.listUsers)))
 	mux.Handle("/admin/jobs", app.session.Enable(http.HandlerFunc(
 		app.listJobs)))
+	mux.Handle("/resend", app.session.Enable(http.HandlerFunc(app.resendVerification)))
 	mux.Handle("/verify", app.session.Enable(http.HandlerFunc(app.verifyUser)))
 
 	// The print API -- not part of the UI

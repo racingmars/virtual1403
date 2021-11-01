@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/racingmars/virtual1403/webserver/db"
 	"github.com/racingmars/virtual1403/webserver/mailer"
@@ -130,17 +131,19 @@ func (app *application) userInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responseValues := map[string]interface{}{
-		"verified":        u.Verified,
-		"name":            u.FullName,
-		"email":           u.Email,
-		"apiKey":          u.AccessKey,
-		"apiEndpoint":     app.serverBaseURL + "/print",
-		"pageCount":       u.PageCount,
-		"jobCount":        u.JobCount,
-		"passwordError":   app.session.Get(r, "passwordError"),
-		"passwordSuccess": app.session.Get(r, "passwordSuccess"),
-		"verifySuccess":   app.session.Get(r, "verifySuccess"),
-		"joblog":          joblog,
+		"verified":            u.Verified,
+		"name":                u.FullName,
+		"email":               u.Email,
+		"apiKey":              u.AccessKey,
+		"apiEndpoint":         app.serverBaseURL + "/print",
+		"pageCount":           u.PageCount,
+		"jobCount":            u.JobCount,
+		"passwordError":       app.session.Get(r, "passwordError"),
+		"passwordSuccess":     app.session.Get(r, "passwordSuccess"),
+		"verifySuccess":       app.session.Get(r, "verifySuccess"),
+		"verifyResendError":   app.session.Get(r, "verifyResendError"),
+		"verifyResendSuccess": app.session.Get(r, "verifyResendSuccess"),
+		"joblog":              joblog,
 	}
 
 	if responseValues["passwordError"] != nil {
@@ -151,6 +154,12 @@ func (app *application) userInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	if responseValues["verifySuccess"] != nil {
 		app.session.Remove(r, "verifySuccess")
+	}
+	if responseValues["verifyResendError"] != nil {
+		app.session.Remove(r, "verifyResendError")
+	}
+	if responseValues["verifyResendSuccess"] != nil {
+		app.session.Remove(r, "verifyResendSuccess")
 	}
 
 	app.render(w, r, "user.page.tmpl", responseValues)
@@ -298,6 +307,7 @@ func (app *application) signup(w http.ResponseWriter, r *http.Request) {
 	newuser := model.NewUser(email, password)
 	newuser.FullName = name
 	newuser.Enabled = true
+	newuser.LastVerificationEmail = time.Now()
 
 	if err := app.db.SaveUser(newuser); err != nil {
 		log.Printf("ERROR couldn't save new user %s to DB: %v", email, err)
@@ -315,6 +325,74 @@ func (app *application) signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "user", http.StatusSeeOther)
+}
+
+// resendVerification is the HTTP hander for POSTs to /resent for users that
+// want to re-send the verification email. We will only allow one send per
+// hour so that we can't be used for someone to sign up with someone else's
+// email address then blast it with spam.
+func (app *application) resendVerification(w http.ResponseWriter,
+	r *http.Request) {
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Verify we have a logged in, valid user
+	u := app.checkLoggedInUser(r)
+	if u == nil {
+		// No logged in user
+		app.session.Destroy(r)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	if u.Verified {
+		// User is already verified. Just send them back to user page.
+		log.Printf(
+			"INFO  %s tried to send verification email but is already verified",
+			u.Email)
+		http.Redirect(w, r, "/user", http.StatusSeeOther)
+		return
+	}
+
+	if time.Since(u.LastVerificationEmail) < 1*time.Hour {
+		// Too soon... make them wait an hour between verifications.
+		app.session.Put(r, "verifyResendError", "We have sent a "+
+			"verification email within the last hour. Please wait for the "+
+			"email to arrive, or request the email again after an hour "+
+			"has passed.")
+		log.Printf(
+			"INFO  %s tried to request another verification email too quickly",
+			u.Email)
+		http.Redirect(w, r, "/user", http.StatusSeeOther)
+		return
+	}
+
+	// Update the user's last verification send time
+	u.LastVerificationEmail = time.Now()
+	if err := app.db.SaveUser(*u); err != nil {
+		log.Printf("ERROR couldn't save updated user %s to DB: %v",
+			u.Email, err)
+		app.serverError(w, "Unexpected error saving user update to database.")
+		return
+	}
+
+	if err := mailer.SendVerificationCode(app.mailconfig, u.Email,
+		app.serverBaseURL+"/verify?token="+
+			url.QueryEscape(u.AccessKey)); err != nil {
+		log.Printf("ERROR couldn't send verification email for %s: %v",
+			u.Email, err)
+		app.session.Put(r, "verifyResendError",
+			"Error sending verification email.")
+	} else {
+		app.session.Put(r, "verifyResendSuccess",
+			"Verification email sent.")
+	}
+
+	http.Redirect(w, r, "user", http.StatusSeeOther)
+
 }
 
 // changePassword is the HTTP handler for POSTS to /changepassword for users

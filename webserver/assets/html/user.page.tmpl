@@ -39,8 +39,18 @@ access_key: "{{.apiKey}}"</pre></p>
     <div class="message is-warning">
     <div class="message-header">Email verification required</div>
     <div class="message-body">
+        {{with .verifyResendError}}
+            <div class="notification is-danger">
+                {{.}}
+            </div>
+        {{end}}
+        {{with .verifyResendSuccess}}
+            <div class="notification is-success">
+                {{.}}
+            </div>
+        {{end}}
         <p class="is-size-4">Your email address needs to be verified. Please click on the link in the verification email we sent when you signed up for your account.<p>
-        <p><a class="button is-warning" href="resend">Re-send verification email</a></p>
+        <p><form action="resend" method="post"><input type="submit" class="button is-warning" value="Re-send verification email"></form></p>
     </div>
     </div>
     </div>
