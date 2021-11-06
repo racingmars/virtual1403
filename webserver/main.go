@@ -20,6 +20,7 @@ package main
 
 import (
 	_ "embed"
+	"encoding/hex"
 	"fmt"
 	"html/template"
 	"log"
@@ -46,9 +47,6 @@ type application struct {
 //go:embed IBMPlexMono-Regular.ttf
 var defaultFont []byte
 
-// TODO: need to not hard-code this
-var secret = []byte("u46IpCV9y5Vlur8YvODJEhgOY8m9JVE4")
-
 func main() {
 	var app application
 	var err error
@@ -73,12 +71,14 @@ func main() {
 		app.font = defaultFont
 	}
 
+	// Initialize HTML template cache for UI
 	templateCache, err := newTemplateCache()
 	if err != nil {
 		log.Fatalf("FATAL unable to load templates: %v", err)
 	}
 	app.templateCache = templateCache
 
+	// Open BoltDB database file
 	app.db, err = db.NewDB(config.DatabaseFile)
 	if err != nil {
 		panic(err)
@@ -95,9 +95,17 @@ func main() {
 
 	app.serverBaseURL = config.BaseURL
 
-	app.session = sessions.New([]byte(secret))
+	// Get session cookie secret key from DB and initialize session manager
+	sessionSecret, err := app.db.GetSessionSecret()
+	if err != nil {
+		log.Fatalf("FATAL unable to get session secret key: %v", err)
+	}
+	log.Printf("INFO  got session secret: %s",
+		hex.EncodeToString(sessionSecret))
+	app.session = sessions.New(sessionSecret)
 	app.session.Lifetime = 3 * time.Hour
 
+	// Build UI routes
 	mux := http.NewServeMux()
 	mux.Handle("/static/", http.FileServer(http.FS(assets.Content)))
 	mux.Handle("/", app.session.Enable(http.HandlerFunc(app.home)))
@@ -112,7 +120,8 @@ func main() {
 		app.listUsers)))
 	mux.Handle("/admin/jobs", app.session.Enable(http.HandlerFunc(
 		app.listJobs)))
-	mux.Handle("/resend", app.session.Enable(http.HandlerFunc(app.resendVerification)))
+	mux.Handle("/resend", app.session.Enable(http.HandlerFunc(
+		app.resendVerification)))
 	mux.Handle("/verify", app.session.Enable(http.HandlerFunc(app.verifyUser)))
 
 	// The print API -- not part of the UI

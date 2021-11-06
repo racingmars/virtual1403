@@ -26,6 +26,8 @@ import (
 
 var ErrNotFound = errors.New("not found")
 
+const SessionSecretKeyLength = 32
+
 type DB interface {
 	// Close will close the database.
 	Close() error
@@ -60,4 +62,11 @@ type DB interface {
 	// GetJobLog returns up to size rows from the job log in descending order
 	// of time.
 	GetJobLog(size int) ([]model.JobLogEntry, error)
+
+	// GetSessionSecret will return a 32-byte random value to use as the
+	// session secret key. If none exists in the database, this function will
+	// generate one and save it. Essentially, on first startup, each new
+	// database generates a random value which will be used for the life of
+	// the database file.
+	GetSessionSecret() ([]byte, error)
 }

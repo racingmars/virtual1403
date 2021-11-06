@@ -20,8 +20,10 @@ package db
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -35,10 +37,12 @@ type boltimpl struct {
 }
 
 const (
-	userBucketName      = "users"
-	accessKeyBucketName = "access_keys"
-	jobLogBucketName    = "job_log"
-	jobLogUserIndexName = "job_log_user_index"
+	userBucketName             = "users"
+	accessKeyBucketName        = "access_keys"
+	jobLogBucketName           = "job_log"
+	jobLogUserIndexName        = "job_log_user_index"
+	configBucketName           = "config"
+	sessionSecretKeyConfigName = "session_secret"
 )
 
 func NewDB(path string) (DB, error) {
@@ -63,6 +67,10 @@ func NewDB(path string) (DB, error) {
 		}
 		if _, err := tx.CreateBucketIfNotExists(
 			[]byte(jobLogUserIndexName)); err != nil {
+			return err
+		}
+		if _, err := tx.CreateBucketIfNotExists(
+			[]byte(configBucketName)); err != nil {
 			return err
 		}
 		return nil
@@ -371,4 +379,37 @@ func (db *boltimpl) GetJobLog(size int) ([]model.JobLogEntry, error) {
 	}
 
 	return results, nil
+}
+
+func (db *boltimpl) GetSessionSecret() ([]byte, error) {
+	result := make([]byte, SessionSecretKeyLength)
+	err := db.bdb.Update(func(tx *bolt.Tx) error {
+		configBucket := tx.Bucket([]byte(configBucketName))
+
+		// Does the session key already exist in the database?
+		v := configBucket.Get([]byte(sessionSecretKeyConfigName))
+		if len(v) == len(result) {
+			copy(result, v)
+			return nil
+		}
+
+		// Nothing in the database already. Generate random bytes and save
+		// them.
+		if n, err := rand.Read(result); err != nil {
+			return err
+		} else if n != SessionSecretKeyLength {
+			return fmt.Errorf("got %d random bytes instead of %d", n,
+				SessionSecretKeyLength)
+		}
+
+		if err := configBucket.Put([]byte(sessionSecretKeyConfigName),
+			result); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
