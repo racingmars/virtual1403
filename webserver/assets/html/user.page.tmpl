@@ -5,6 +5,11 @@
 {{define "main"}}
 
 <div class="content">
+
+{{ if .isAdmin }}
+    {{ template "adminlinks" . }}
+{{ end }}
+
 <p>Welcome {{.name}} ({{.email}}). You have printed a total of {{.pageCount}} page{{if ne .pageCount 1}}s{{end}} over {{.jobCount}} job{{ if ne .jobCount 1}}s{{end}}!</p>
 
 {{ with .verifySuccess }}
@@ -126,7 +131,7 @@ access_key: "{{.apiKey}}"</pre></p>
 </form>
 </div>
 <div class="column">
-<h2 class="subtitle">Recent print jobs</h2>
+<h3 class="subtitle">Recent print jobs</h2>
 <table class="table">
     <thead>
         <tr><th>Time <span class="is-size-7">(UTC)</span></th><th>Name</th><th>Pages</th></tr>

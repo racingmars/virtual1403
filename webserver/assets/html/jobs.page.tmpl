@@ -3,6 +3,12 @@
 {{define "title"}}Admin — 100 Most Recent Jobs{{end}}
 
 {{define "main"}}
+
+{{ if .isAdmin }}
+    {{ template "adminlinks" . }}
+{{ end }}
+
+{{ with .jobs }}
 <table class="table">
     <thead><tr>
         <th>Time <span class="is-size-7">(UTC)</span></th>
@@ -21,4 +27,6 @@
     {{end}}
     </tbody>
 </table>
+{{ end }}
+
 {{end}}

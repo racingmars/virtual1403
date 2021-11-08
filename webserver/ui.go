@@ -19,6 +19,7 @@ package main
 // along with virtual1403. If not, see <https://www.gnu.org/licenses/>.
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -131,6 +132,7 @@ func (app *application) userInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responseValues := map[string]interface{}{
+		"isAdmin":             u.Admin,
 		"verified":            u.Verified,
 		"name":                u.FullName,
 		"email":               u.Email,
@@ -196,9 +198,9 @@ func (app *application) regenkey(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "user", http.StatusSeeOther)
 }
 
-// listUsers provides logged-in administrators with a list of all users in the
+// adminListUsers provides logged-in administrators with a list of all users in the
 // database.
-func (app *application) listUsers(w http.ResponseWriter, r *http.Request) {
+func (app *application) adminListUsers(w http.ResponseWriter, r *http.Request) {
 	u := app.checkLoggedInUser(r)
 	if u == nil {
 		// No logged in user
@@ -220,14 +222,19 @@ func (app *application) listUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	responseValues := map[string]interface{}{
+		"isAdmin": u.Admin,
+		"users":   users,
+	}
+
 	log.Printf("INFO  %s accessed the users list page", u.Email)
 
-	app.render(w, r, "users.page.tmpl", users)
+	app.render(w, r, "users.page.tmpl", responseValues)
 }
 
-// listJobs provides logged-in administrators with a list of the 100 most
+// adminListJobs provides logged-in administrators with a list of the 100 most
 // recent jobs.
-func (app *application) listJobs(w http.ResponseWriter, r *http.Request) {
+func (app *application) adminListJobs(w http.ResponseWriter, r *http.Request) {
 	u := app.checkLoggedInUser(r)
 	if u == nil {
 		// No logged in user
@@ -249,9 +256,154 @@ func (app *application) listJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	responseValues := map[string]interface{}{
+		"isAdmin": u.Admin,
+		"jobs":    jobs,
+	}
+
 	log.Printf("INFO  %s accessed the job log page", u.Email)
 
-	app.render(w, r, "jobs.page.tmpl", jobs)
+	app.render(w, r, "jobs.page.tmpl", responseValues)
+}
+
+// adminEditUser lets logged-in administrators edit a user.
+func (app *application) adminEditUser(w http.ResponseWriter, r *http.Request) {
+	u := app.checkLoggedInUser(r)
+	if u == nil {
+		// No logged in user
+		app.session.Destroy(r)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Only display this page to administrators
+	if !u.Admin {
+		w.WriteHeader(http.StatusForbidden)
+		io.WriteString(w, "This page is only available to administrators.")
+		return
+	}
+
+	// User to edit is email address in query param 'email'
+	email := r.URL.Query().Get("email")
+	if email == "" {
+		http.Error(w, "email query parameter is required",
+			http.StatusBadRequest)
+		return
+	}
+
+	user, err := app.db.GetUser(email)
+	if err == db.ErrNotFound {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("ERROR: error getting user: %v", err)
+		http.Error(w, "DB error getting user record",
+			http.StatusInternalServerError)
+		return
+	}
+
+	// Get 100 most recent jobs the user printed
+	joblog, err := app.db.GetUserJobLog(user.Email, 100)
+	if err != nil {
+		log.Printf("ERR  db error getting user joblog for %s: %v",
+			user.Email, err)
+		// We'll allow the page to render, it'll just have an empty job log
+	}
+
+	responseValues := map[string]interface{}{
+		"isAdmin":   u.Admin, // logged-in user, not target user
+		"verified":  user.Verified,
+		"name":      user.FullName,
+		"email":     user.Email,
+		"admin":     user.Admin,
+		"active":    user.Enabled,
+		"pageCount": user.PageCount,
+		"jobCount":  user.JobCount,
+		"joblog":    joblog,
+	}
+
+	log.Printf("INFO  %s accessed user %s", u.Email, user.Email)
+
+	app.render(w, r, "useredit.page.tmpl", responseValues)
+}
+
+// adminEditUserPost lets logged-in administrators submit changes to the user
+// record.
+func (app *application) adminEditUserPost(w http.ResponseWriter,
+	r *http.Request) {
+
+	// Only form POST requests to this handler
+	if r.Method != http.MethodPost {
+		http.Error(w, "Bad method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	u := app.checkLoggedInUser(r)
+	if u == nil {
+		// No logged in user
+		app.session.Destroy(r)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Only display this page to administrators
+	if !u.Admin {
+		w.WriteHeader(http.StatusForbidden)
+		io.WriteString(w, "This page is only available to administrators.")
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		log.Printf("ERROR couldn't parse update user form: %v", err)
+		http.Error(w, "couldn't parse update form", http.StatusInternalServerError)
+		return
+	}
+
+	email := r.Form.Get("email")
+	fmt.Printf("EMAIL: %s\n", email)
+
+	user, err := app.db.GetUser(email)
+	if err == db.ErrNotFound {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("ERROR error getting user: %v", err)
+		http.Error(w, "DB error getting user record",
+			http.StatusInternalServerError)
+		return
+	}
+
+	newPassword := r.Form.Get("new-password")
+	active := r.Form.Get("active")
+	admin := r.Form.Get("admin")
+
+	if newPassword != "" {
+		user.SetPassword(newPassword)
+	}
+
+	if active == "yes" {
+		user.Enabled = true
+	} else {
+		user.Enabled = false
+	}
+
+	if admin == "yes" {
+		user.Admin = true
+	} else {
+		user.Admin = false
+	}
+
+	if err := app.db.SaveUser(user); err != nil {
+		log.Printf("ERROR saving user %s: %v", user.Email, err)
+		http.Error(w, "DB error saving user", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("INFO  %s updated user %s", u.Email, user.Email)
+
+	http.Redirect(w, r, "users", http.StatusSeeOther)
 }
 
 // signup is the HTTP POST handler for /signup, to create new user accounts.

@@ -121,13 +121,19 @@ func main() {
 	mux.Handle("/logout", app.session.Enable(http.HandlerFunc(app.logout)))
 	mux.Handle("/user", app.session.Enable(http.HandlerFunc(app.userInfo)))
 	mux.Handle("/regenkey", app.session.Enable(http.HandlerFunc(app.regenkey)))
-	mux.Handle("/admin/users", app.session.Enable(http.HandlerFunc(
-		app.listUsers)))
-	mux.Handle("/admin/jobs", app.session.Enable(http.HandlerFunc(
-		app.listJobs)))
 	mux.Handle("/resend", app.session.Enable(http.HandlerFunc(
 		app.resendVerification)))
 	mux.Handle("/verify", app.session.Enable(http.HandlerFunc(app.verifyUser)))
+
+	// Admin pages
+	mux.Handle("/admin/users", app.session.Enable(http.HandlerFunc(
+		app.adminListUsers)))
+	mux.Handle("/admin/jobs", app.session.Enable(http.HandlerFunc(
+		app.adminListJobs)))
+	mux.Handle("/admin/edituser", app.session.Enable(http.HandlerFunc(
+		app.adminEditUser)))
+	mux.Handle("/admin/doedituser", app.session.Enable(http.HandlerFunc(
+		app.adminEditUserPost)))
 
 	// The print API -- not part of the UI
 	mux.Handle("/print", http.HandlerFunc(app.printjob))
