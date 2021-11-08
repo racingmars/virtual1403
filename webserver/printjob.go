@@ -26,6 +26,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -72,6 +73,11 @@ import (
 //                  directives.
 // P:               Page break. This will advance the virtual printer to the
 //                  next page. Any data on a P: directive is ignored.
+// J:[job data]   - Job data. This optional component may contain a string up
+//                  to 25 characters long, containing the characters
+//                  [a-zA-Z0-9_] with an identifier for the job that may be
+//                  included in the generated filename. If there are multiple
+//                  J: directives, only the last one is used.
 //
 // Responses:
 //
@@ -158,7 +164,8 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 
 	// Process the directives in the request body and send them to the
 	// virtual printer.
-	if err = processPrintDirectives(d, job); err != nil {
+	jobinfo, err := processPrintDirectives(d, job)
+	if err != nil {
 		http.Error(w, fmt.Sprintf("Invalid data: %v", err),
 			http.StatusBadRequest)
 	}
@@ -172,11 +179,17 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	attachmentName := fmt.Sprintf("printout-%d.pdf",
-		time.Now().UTC().UnixMilli())
+	jobtag := jobinfo
+	if jobtag != "" {
+		jobtag = jobtag + "-"
+	}
+	jobname := fmt.Sprintf("%s%s", jobtag,
+		time.Now().UTC().Format("2006-01-02T15:04:05Z"))
+
+	attachmentName := fmt.Sprintf("virtual1403_%s.pdf", jobname)
 
 	err = mailer.Send(a.mailconfig, user.Email,
-		"Printout for your job",
+		"Virtual 1403 printout "+jobinfo,
 		"The intern in the machine room has carefully collated your job and "+
 			"prepared it for delivery. Please find it attached to this "+
 			"message.\r\n\r\n"+
@@ -192,16 +205,20 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 	log.Printf("INFO  sent %d pages to %s", pagecount, user.Email)
 
 	// Try to log the job to the database
-	if err = a.db.LogJob(user.Email, pagecount); err != nil {
+	if err = a.db.LogJob(user.Email, jobinfo, pagecount); err != nil {
 		log.Printf("ERROR couldn't log job: %v", err)
 	}
 
 	// HTTP 200 will be returned if we make it this far.
 }
 
+// jobInfoRegex matches valid/allowed job info data
+var jobInfoRegex = regexp.MustCompile(`^[a-zA-z0-9_]{0,25}$`)
+
 // processPrintDirectives will apply print directives to the virtual printer
 // job, returning an error if the input data is invalid.
-func processPrintDirectives(r io.Reader, job vprinter.Job) error {
+func processPrintDirectives(r io.Reader, job vprinter.Job) (string, error) {
+	var jobinfo string
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -209,7 +226,7 @@ func processPrintDirectives(r io.Reader, job vprinter.Job) error {
 			continue
 		}
 		if len(line) < 2 {
-			return errors.New("line received without directive")
+			return "", errors.New("line received without directive")
 		}
 		directive := line[0:2]
 		param := line[2:]
@@ -217,7 +234,7 @@ func processPrintDirectives(r io.Reader, job vprinter.Job) error {
 		// In all cases, param must be a valid UTF-8 string <= 132 runes, so
 		// we'll take care of that now.
 		if !utf8.ValidString(param) {
-			return errors.New("invalid UTF-8 string")
+			return "", errors.New("invalid UTF-8 string")
 		}
 
 		// Trim to 132 runes
@@ -230,14 +247,19 @@ func processPrintDirectives(r io.Reader, job vprinter.Job) error {
 			job.AddLine(param, false)
 		case "P:":
 			job.NewPage()
+		case "J:":
+			if !jobInfoRegex.MatchString(param) {
+				return "", errors.New("invalid job data directive")
+			}
+			jobinfo = param
 		default:
-			return errors.New("invalid directive received")
+			return "", errors.New("invalid directive received")
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return jobinfo, nil
 }
 
 // trimToRuneLen trims the input string, str, to no more than n runes. The

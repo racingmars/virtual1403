@@ -28,7 +28,7 @@ import (
 type PrinterHandler interface {
 	AddLine(line string, linefeed bool)
 	PageBreak()
-	EndOfJob()
+	EndOfJob(jobinfo string)
 }
 
 const maxLineLen = 132
@@ -99,8 +99,9 @@ func (s *scanner) emitLine(linefeed bool) {
 }
 
 // This regular expression, *if immediately followed by a LF+FF*, indicates
-// end of job from the Moseley MVS 3.8J sysgen.
-var eojRegexp = regexp.MustCompile(`(?m)\*\*\*\*.+END.+(?:JOB|STC).+ROOM.+(?:JOB|STC).+END.+\*\*\*\*`)
+// end of job from the Moseley MVS 3.8J sysgen and TK4-.
+var eojRegexp = regexp.MustCompile(
+	`(?m)\*\*\*\*.+END.+(JOB|STC)\D+(\d+)\s+(\S+)\s+ROOM.+(?:JOB|STC).+END.+\*\*\*\*`)
 
 // When we emit a line and page together (e.g. we got a LF followed by FF),
 // we might be at the end of the job, so we'll check for the end of the
@@ -115,7 +116,21 @@ func (s *scanner) emitLineAndPage() {
 }
 
 func (s *scanner) endJob() {
-	s.handler.EndOfJob()
+	matches := eojRegexp.FindStringSubmatch(s.prevline)
+	jobinfo := ""
+	if len(matches) > 1 {
+		// get first letter, e.g. J(ob) or S(tc)
+		jobinfo = string(matches[1][0])
+	}
+	if len(matches) > 2 {
+		// Should be the job number
+		jobinfo = jobinfo + matches[2]
+	}
+	if len(matches) > 3 {
+		// Should be the job name
+		jobinfo = jobinfo + "_" + matches[3]
+	}
+	s.handler.EndOfJob(jobinfo)
 	s.prevline = ""
 	s.pos = 0
 }

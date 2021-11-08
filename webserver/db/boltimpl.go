@@ -221,7 +221,7 @@ func (db *boltimpl) DeleteUser(email string) error {
 	})
 }
 
-func (db *boltimpl) LogJob(email string, pages int) error {
+func (db *boltimpl) LogJob(email, jobinfo string, pages int) error {
 	err := db.bdb.Update(func(tx *bolt.Tx) error {
 		userBucket := tx.Bucket([]byte(userBucketName))
 		logBucket := tx.Bucket([]byte(jobLogBucketName))
@@ -258,10 +258,11 @@ func (db *boltimpl) LogJob(email string, pages int) error {
 			return err
 		}
 		logentry := model.JobLogEntry{
-			ID:    nextID,
-			Email: user.Email,
-			Pages: pages,
-			Time:  user.LastJob,
+			ID:      nextID,
+			Email:   user.Email,
+			Pages:   pages,
+			Time:    user.LastJob,
+			JobInfo: jobinfo,
 		}
 		logentryjson, err := json.Marshal(&logentry)
 		if err != nil {

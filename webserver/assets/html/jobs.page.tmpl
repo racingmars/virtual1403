@@ -7,6 +7,7 @@
     <thead><tr>
         <th>Time <span class="is-size-7">(UTC)</span></th>
         <th>Email</th>
+        <th>Job Name</th>
         <th>Pages</th>
     </tr></thead>
     <tbody>
@@ -14,6 +15,7 @@
         <tr>
             <td>{{.Time.Format "2006-01-02 15:04:05"}}</td>
             <td><a href="edituser?email={{.Email}}">{{.Email}}</a></td>
+            <td>{{.JobInfo}}</td>
             <td>{{.Pages}}</td>
         </tr>
     {{end}}

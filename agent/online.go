@@ -60,7 +60,9 @@ func (o *onlineOutputHandler) PageBreak() {
 	o.w.WriteString("P:\n")
 }
 
-func (o *onlineOutputHandler) EndOfJob() {
+func (o *onlineOutputHandler) EndOfJob(jobinfo string) {
+	o.w.WriteString("J:" + jobinfo + "\n")
+
 	// No matter what happens, we always want to reset our state to a fresh
 	// new job.
 	defer func() {

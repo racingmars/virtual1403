@@ -53,7 +53,7 @@ type DB interface {
 	// provided email address. This will add to the job log and update the
 	// user's record with the last job time and increase the job count for the
 	// user.
-	LogJob(email string, pages int) error
+	LogJob(email, jobinfo string, pages int) error
 
 	// GetUserJobLog returns up to size rows from the job log for the user
 	// with the provided email address. Jobs are returned in descending order
