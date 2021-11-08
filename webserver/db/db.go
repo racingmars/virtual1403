@@ -22,6 +22,7 @@ import (
 	"errors"
 
 	"github.com/racingmars/virtual1403/webserver/model"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 var ErrNotFound = errors.New("not found")
@@ -69,4 +70,7 @@ type DB interface {
 	// database generates a random value which will be used for the life of
 	// the database file.
 	GetSessionSecret() ([]byte, error)
+
+	// We also use our database as an autocert cache
+	autocert.Cache
 }

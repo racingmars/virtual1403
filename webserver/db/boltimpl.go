@@ -42,6 +42,7 @@ const (
 	jobLogBucketName           = "job_log"
 	jobLogUserIndexName        = "job_log_user_index"
 	configBucketName           = "config"
+	autocertBucketName         = "autocert"
 	sessionSecretKeyConfigName = "session_secret"
 )
 
@@ -71,6 +72,10 @@ func NewDB(path string) (DB, error) {
 		}
 		if _, err := tx.CreateBucketIfNotExists(
 			[]byte(configBucketName)); err != nil {
+			return err
+		}
+		if _, err := tx.CreateBucketIfNotExists(
+			[]byte(autocertBucketName)); err != nil {
 			return err
 		}
 		return nil

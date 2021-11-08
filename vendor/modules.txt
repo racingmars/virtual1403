@@ -1,9 +1,14 @@
 # github.com/boltdb/bolt v1.3.1
 ## explicit
 github.com/boltdb/bolt
+# github.com/felixge/httpsnoop v1.0.1
+github.com/felixge/httpsnoop
 # github.com/golangcollege/sessions v1.2.0
 ## explicit
 github.com/golangcollege/sessions
+# github.com/gorilla/handlers v1.5.1
+## explicit
+github.com/gorilla/handlers
 # github.com/jung-kurt/gofpdf v1.16.2
 ## explicit
 github.com/jung-kurt/gofpdf
@@ -17,17 +22,26 @@ github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
 # golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 ## explicit
+golang.org/x/crypto/acme
+golang.org/x/crypto/acme/autocert
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/internal/poly1305
 golang.org/x/crypto/internal/subtle
 golang.org/x/crypto/nacl/secretbox
 golang.org/x/crypto/salsa20/salsa
+# golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
+golang.org/x/net/idna
 # golang.org/x/sys v0.0.0-20210921065528-437939a70204
 ## explicit
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
+# golang.org/x/text v0.3.3
+golang.org/x/text/secure/bidirule
+golang.org/x/text/transform
+golang.org/x/text/unicode/bidi
+golang.org/x/text/unicode/norm
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 ## explicit
 gopkg.in/yaml.v3

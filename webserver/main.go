@@ -24,10 +24,15 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"net"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/golangcollege/sessions"
+	"github.com/gorilla/handlers"
+	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/racingmars/virtual1403/vprinter"
 	"github.com/racingmars/virtual1403/webserver/assets"
@@ -127,7 +132,51 @@ func main() {
 	// The print API -- not part of the UI
 	mux.Handle("/print", http.HandlerFunc(app.printjob))
 
-	log.Printf("INFO  Starting server on :%d", config.ListenPort)
-	err = http.ListenAndServe(fmt.Sprintf(":%d", config.ListenPort), mux)
-	log.Fatal(err)
+	// If running plain HTTP service, we're ready to go
+	if config.TLSListenPort <= 0 {
+		log.Printf("INFO  Starting plain HTTP server on :%d",
+			config.ListenPort)
+		err = http.ListenAndServe(fmt.Sprintf(":%d", config.ListenPort),
+			handlers.CombinedLoggingHandler(os.Stdout, mux))
+		log.Fatal(err)
+		return
+	}
+
+	// Otherwise we set up a redirect on plain HTTP port and host w/ TLS and
+	// autocert.
+	go func() {
+		log.Printf("INFO  Starting plain HTTP redirect server in: %d",
+			config.ListenPort)
+		err := http.ListenAndServe(fmt.Sprintf(":%d", config.ListenPort),
+			handlers.CombinedLoggingHandler(os.Stdout, http.HandlerFunc(
+				generateRedirectHandler(config.TLSListenPort))))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	m := &autocert.Manager{
+		Cache:      app.db,
+		Prompt:     autocert.AcceptTOS,
+		HostPolicy: autocert.HostWhitelist(config.TLSDomain),
+	}
+	s := &http.Server{
+		Addr:      ":" + strconv.Itoa(config.TLSListenPort),
+		TLSConfig: m.TLSConfig(),
+		Handler:   handlers.CombinedLoggingHandler(os.Stdout, mux),
+	}
+	log.Printf("INFO  Starting TLS HTTP server on %s", s.Addr)
+	if err := s.ListenAndServeTLS("", ""); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func generateRedirectHandler(port int) func(http.ResponseWriter,
+	*http.Request) {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		host, _, _ := net.SplitHostPort(r.Host)
+		http.Redirect(w, r, fmt.Sprintf("https://%s:%d/", host, port),
+			http.StatusMovedPermanently)
+	}
 }

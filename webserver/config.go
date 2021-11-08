@@ -32,12 +32,14 @@ import (
 )
 
 type ServerConfig struct {
-	DatabaseFile string        `yaml:"database_file"`
-	CreateAdmin  string        `yaml:"create_admin"`
-	FontFile     string        `yaml:"font_file"`
-	ListenPort   int           `yaml:"listen_port"`
-	BaseURL      string        `yaml:"server_base_url"`
-	MailConfig   mailer.Config `yaml:"mail_config"`
+	DatabaseFile  string        `yaml:"database_file"`
+	CreateAdmin   string        `yaml:"create_admin"`
+	FontFile      string        `yaml:"font_file"`
+	ListenPort    int           `yaml:"listen_port"`
+	TLSListenPort int           `yaml:"tls_listen_port"`
+	TLSDomain     string        `yaml:"tls_domain"`
+	BaseURL       string        `yaml:"server_base_url"`
+	MailConfig    mailer.Config `yaml:"mail_config"`
 }
 
 func readConfig(path string) (ServerConfig, []error) {
@@ -62,6 +64,17 @@ func readConfig(path string) (ServerConfig, []error) {
 	if c.ListenPort < 1 || c.ListenPort > 65535 {
 		errs = append(errs, fmt.Errorf("port number %d is invalid",
 			c.ListenPort))
+	}
+
+	// TLSListenPort is optional; <= 0 we don't run TLS listener
+	if c.TLSListenPort >= 1 && c.ListenPort > 65535 {
+		errs = append(errs, fmt.Errorf("TLS listen port number %d is invalid",
+			c.ListenPort))
+	}
+
+	// If TLSListenPort is set, we require server hostname
+	if c.TLSListenPort > 0 && c.TLSDomain == "" {
+		errs = append(errs, fmt.Errorf("TLS domain name is required"))
 	}
 
 	if c.BaseURL == "" {

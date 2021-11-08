@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/boltdb/bolt v1.3.1
 	github.com/golangcollege/sessions v1.2.0
+	github.com/gorilla/handlers v1.5.1
 	github.com/jung-kurt/gofpdf v1.16.2
 	github.com/klauspost/compress v1.13.6
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
