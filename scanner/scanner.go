@@ -113,7 +113,7 @@ func (s *scanner) emitLine(linefeed bool) {
 // This regular expression, *if immediately followed by a LF+FF*, indicates
 // end of job from the Moseley MVS 3.8J sysgen and TK4-.
 var eojRegexp = regexp.MustCompile(
-	`(?m)\*\*\*\*.+END.+(JOB|STC)\D+(\d+)\s+(\S+)\s+ROOM.+(?:JOB|STC).+END.+\*\*\*\*`)
+	`(?m)\*+.+END.+(JOB|STC)\D+(\d+)\s+(\S+)\s+.+ROOM.+END.+\*+`)
 
 // When we emit a line and page together (e.g. we got a LF followed by FF),
 // we might be at the end of the job, so we'll check for the end of the
