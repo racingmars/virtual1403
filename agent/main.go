@@ -22,6 +22,7 @@ import (
 	"bufio"
 	_ "embed"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -49,9 +50,17 @@ type configuration struct {
 	FontFile        string `yaml:"font_file"`
 }
 
+var trace = flag.Bool("trace", false, "enable trace logging")
+
 func main() {
+	flag.Parse()
+
 	var handler scanner.PrinterHandler
 	startupMessage()
+
+	if *trace {
+		log.Printf("TRACE: trace logging enabled")
+	}
 
 	// Load configuration file
 	conf, err := loadConfig("config.yaml")
@@ -143,25 +152,30 @@ func validateConfig(c configuration) []error {
 
 	// Verify required fields are present
 	if c.HerculesAddress == "" {
-		errs = append(errs, errors.New("must set 'hercules_address' in the config file"))
+		errs = append(errs,
+			errors.New("must set 'hercules_address' in the config file"))
 	}
 
 	if !(c.Mode == "local" || c.Mode == "online") {
-		errs = append(errs, errors.New("'mode' must be either 'local' or 'online'"))
+		errs = append(errs,
+			errors.New("'mode' must be either 'local' or 'online'"))
 	}
 
 	if c.Mode == "local" {
 		if c.OutputDir == "" {
-			errs = append(errs, errors.New("must set 'output_directory' in the config file"))
+			errs = append(errs,
+				errors.New("must set 'output_directory' in the config file"))
 		}
 	}
 
 	if c.Mode == "online" {
 		if c.ServiceAddress == "" {
-			errs = append(errs, errors.New("must set 'service_address' in the config file"))
+			errs = append(errs,
+				errors.New("must set 'service_address' in the config file"))
 		}
 		if c.APIKey == "" {
-			errs = append(errs, errors.New("must set 'api_key' in the config file"))
+			errs = append(errs,
+				errors.New("must set 'api_key' in the config file"))
 		}
 	}
 
@@ -178,7 +192,7 @@ func handleHercules(address string, handler scanner.PrinterHandler) {
 	defer conn.Close()
 	log.Printf("INFO:  Connection successful.\n")
 
-	err = scanner.Scan(bufio.NewReader(conn), handler)
+	err = scanner.Scan(bufio.NewReader(conn), handler, *trace)
 	if err == io.EOF {
 		// we're done!
 		log.Printf("INFO:  Hercules disconnected.\n")

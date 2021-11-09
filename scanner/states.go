@@ -18,16 +18,32 @@
 
 package scanner
 
+import "log"
+
 // getNextByte represents the "normal" state where we are collecting input
 // characters into the current line until we get a control character or
 // overflow the current line.
 func getNextByte(s *scanner, b byte) stateFunc {
+	if s.newjob {
+		log.Printf("INFO:  receiving data from Hercules for new print job")
+		s.newjob = false
+	}
+
 	switch b {
 	case charLF:
+		if s.trace {
+			log.Println("TRACE: scanner got LF in getNextByte")
+		}
 		return haveLF
 	case charCR:
+		if s.trace {
+			log.Println("TRACE: scanner got CR in getNextByte")
+		}
 		return haveCR
 	case charFF:
+		if s.trace {
+			log.Println("TRACE: scanner got FF in getNextByte")
+		}
 		s.emitLineAndPage()
 		return getNextByte
 	default:
@@ -65,12 +81,21 @@ func disposeBytes(s *scanner, b byte) stateFunc {
 func haveCR(s *scanner, b byte) stateFunc {
 	switch b {
 	case charCR:
+		if s.trace {
+			log.Println("TRACE: scanner got CR in haveCR")
+		}
 		s.emitLine(false)
 		return haveCR
 	case charLF:
+		if s.trace {
+			log.Println("TRACE: scanner got LF in haveCR")
+		}
 		s.emitLine(true)
 		return getNextByte
 	case charFF:
+		if s.trace {
+			log.Println("TRACE: scanner got FF in haveCR")
+		}
 		s.emitLineAndPage()
 		return getNextByte
 	default:
@@ -86,12 +111,21 @@ func haveCR(s *scanner, b byte) stateFunc {
 func haveLF(s *scanner, b byte) stateFunc {
 	switch b {
 	case charCR:
+		if s.trace {
+			log.Println("TRACE: scanner got CR in haveLF")
+		}
 		s.emitLine(true)
 		return getNextByte
 	case charLF:
+		if s.trace {
+			log.Println("TRACE: scanner got LF in haveLF")
+		}
 		s.emitLine(true)
 		return haveLF
 	case charFF:
+		if s.trace {
+			log.Println("TRACE: scanner got FF in haveLF")
+		}
 		s.emitLineAndPage()
 		return getNextByte
 	default:

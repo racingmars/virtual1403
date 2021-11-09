@@ -20,6 +20,7 @@ package scanner
 
 import (
 	"bufio"
+	"encoding/hex"
 	"log"
 	"regexp"
 )
@@ -48,17 +49,21 @@ type scanner struct {
 	curline  [maxLineLen]byte
 	prevline string
 	handler  PrinterHandler
+	newjob   bool
+	trace    bool
 }
 
 // Scan will read from a bufio.Reader, r, which should be sent data from
 // Hercules printer output. It will output lines (trimmed to 132 characters
 // if necessary) and page breaks and identify the end of jobs in the printer
 // data stream.
-func Scan(r *bufio.Reader, handler PrinterHandler) error {
+func Scan(r *bufio.Reader, handler PrinterHandler, trace bool) error {
 	var s scanner
 	s.rdr = r
 	s.handler = handler
 	s.nextfunc = getNextByte
+	s.newjob = true
+	s.trace = trace
 
 	for {
 		b, err := s.rdr.ReadByte()
@@ -70,6 +75,12 @@ func Scan(r *bufio.Reader, handler PrinterHandler) error {
 }
 
 func (s *scanner) emitLine(linefeed bool) {
+	// Trace output for the raw line
+	if s.trace {
+		log.Printf("TRACE: (lf: %v) scanner got line: %s", linefeed,
+			hex.EncodeToString(s.curline[:s.pos]))
+	}
+
 	// We need to build a valid UTF-8 string. For now we'll handle a couple
 	// mainframe-specific characters we might see, but someday probably need
 	// to make a general Hecules-default-to-UTF-8 table.
@@ -96,6 +107,7 @@ func (s *scanner) emitLine(linefeed bool) {
 	s.prevline = string(utf8runes)
 	s.handler.AddLine(s.prevline, linefeed)
 	s.pos = 0
+
 }
 
 // This regular expression, *if immediately followed by a LF+FF*, indicates
@@ -108,6 +120,10 @@ var eojRegexp = regexp.MustCompile(
 // separator page.
 func (s *scanner) emitLineAndPage() {
 	s.emitLine(true)
+	if s.trace {
+		log.Printf("TRACE: scanner checking for end of job on line: %s",
+			s.prevline)
+	}
 	if eojRegexp.MatchString(s.prevline) {
 		s.endJob()
 	} else {
@@ -133,4 +149,5 @@ func (s *scanner) endJob() {
 	s.handler.EndOfJob(jobinfo)
 	s.prevline = ""
 	s.pos = 0
+	s.newjob = true
 }
