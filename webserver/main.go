@@ -52,6 +52,9 @@ type application struct {
 //go:embed IBMPlexMono-Regular.ttf
 var defaultFont []byte
 
+//go:embed favicon.ico
+var favicon []byte
+
 func main() {
 	var app application
 	var err error
@@ -112,6 +115,7 @@ func main() {
 
 	// Build UI routes
 	mux := http.NewServeMux()
+	mux.Handle("/favicon.ico", http.HandlerFunc(serveFavicon))
 	mux.Handle("/static/", http.FileServer(http.FS(assets.Content)))
 	mux.Handle("/", app.session.Enable(http.HandlerFunc(app.home)))
 	mux.Handle("/login", app.session.Enable(http.HandlerFunc(app.login)))
@@ -185,4 +189,8 @@ func generateRedirectHandler(port int) func(http.ResponseWriter,
 		http.Redirect(w, r, fmt.Sprintf("https://%s:%d/", host, port),
 			http.StatusMovedPermanently)
 	}
+}
+
+func serveFavicon(w http.ResponseWriter, r *http.Request) {
+	w.Write(favicon)
 }
