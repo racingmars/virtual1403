@@ -24,10 +24,10 @@ import (
 	"fmt"
 	"html/template"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golangcollege/sessions"
@@ -155,7 +155,7 @@ func main() {
 	// Otherwise we set up a redirect on plain HTTP port and host w/ TLS and
 	// autocert.
 	go func() {
-		log.Printf("INFO  Starting plain HTTP redirect server in: %d",
+		log.Printf("INFO  Starting plain HTTP redirect server on: %d",
 			config.ListenPort)
 		err := http.ListenAndServe(fmt.Sprintf(":%d", config.ListenPort),
 			handlers.CombinedLoggingHandler(os.Stdout, http.HandlerFunc(
@@ -185,8 +185,8 @@ func generateRedirectHandler(port int) func(http.ResponseWriter,
 	*http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		host, _, _ := net.SplitHostPort(r.Host)
-		http.Redirect(w, r, fmt.Sprintf("https://%s:%d/", host, port),
+		host := strings.Split(r.Host, ":")
+		http.Redirect(w, r, fmt.Sprintf("https://%s:%d/", host[0], port),
 			http.StatusMovedPermanently)
 	}
 }
