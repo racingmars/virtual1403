@@ -19,10 +19,13 @@
 package scanner
 
 import (
-	"bufio"
 	"encoding/hex"
+	"errors"
 	"log"
+	"net"
+	"os"
 	"regexp"
+	"time"
 )
 
 // PrinterHandler interface receives the output of printer output parsing.
@@ -43,7 +46,7 @@ const (
 type stateFunc func(*scanner, byte) stateFunc
 
 type scanner struct {
-	rdr      *bufio.Reader
+	conn     net.Conn
 	nextfunc stateFunc
 	pos      int
 	curline  [maxLineLen]byte
@@ -53,24 +56,40 @@ type scanner struct {
 	trace    bool
 }
 
-// Scan will read from a bufio.Reader, r, which should be sent data from
+// Scan will read from a net.Conn, conn, which should be sent data from
 // Hercules printer output. It will output lines (trimmed to 132 characters
 // if necessary) and page breaks and identify the end of jobs in the printer
 // data stream.
-func Scan(r *bufio.Reader, handler PrinterHandler, trace bool) error {
+func Scan(conn net.Conn, handler PrinterHandler, trace bool) error {
 	var s scanner
-	s.rdr = r
+	s.conn = conn
 	s.handler = handler
 	s.nextfunc = getNextByte
 	s.newjob = true
 	s.trace = trace
 
+	nextByte := make([]byte, 1)
 	for {
-		b, err := s.rdr.ReadByte()
-		if err != nil {
-			return err
+		// If we are in a job, assume the job is done if we don't receive the
+		// next character within half a second.
+		if !s.newjob {
+			if err := s.conn.SetReadDeadline(time.Now().Add(
+				500 * time.Millisecond)); err != nil {
+				log.Printf("ERROR: couldn't set read deadline: %v", err)
+			}
 		}
-		s.nextfunc = s.nextfunc(&s, b)
+		n, err := s.conn.Read(nextByte)
+		if err != nil && errors.Is(err, os.ErrDeadlineExceeded) {
+			s.emitLine(true)
+			s.endJob(true)
+		} else if err != nil {
+			return err
+		} else if n != 1 {
+			log.Printf(
+				"ERROR: read 0 bytes when expecting 1; continuing read loop")
+		} else {
+			s.nextfunc = s.nextfunc(&s, nextByte[0])
+		}
 	}
 }
 
@@ -125,29 +144,40 @@ func (s *scanner) emitLineAndPage() {
 			s.prevline)
 	}
 	if eojRegexp.MatchString(s.prevline) {
-		s.endJob()
+		s.endJob(false)
 	} else {
 		s.handler.PageBreak()
 	}
 }
 
-func (s *scanner) endJob() {
-	matches := eojRegexp.FindStringSubmatch(s.prevline)
+func (s *scanner) endJob(wasTimeout bool) {
 	jobinfo := ""
-	if len(matches) > 1 {
-		// get first letter, e.g. J(ob) or S(tc)
-		jobinfo = string(matches[1][0])
+
+	// If end of job was due to end-of-job line, not a read timeout, we'll try
+	// to populate additional job info.
+	if !wasTimeout {
+		matches := eojRegexp.FindStringSubmatch(s.prevline)
+		if len(matches) > 1 {
+			// get first letter, e.g. J(ob) or S(tc)
+			jobinfo = string(matches[1][0])
+		}
+		if len(matches) > 2 {
+			// Should be the job number
+			jobinfo = jobinfo + matches[2]
+		}
+		if len(matches) > 3 {
+			// Should be the job name
+			jobinfo = jobinfo + "_" + matches[3]
+		}
 	}
-	if len(matches) > 2 {
-		// Should be the job number
-		jobinfo = jobinfo + matches[2]
-	}
-	if len(matches) > 3 {
-		// Should be the job name
-		jobinfo = jobinfo + "_" + matches[3]
-	}
+
 	s.handler.EndOfJob(jobinfo)
 	s.prevline = ""
 	s.pos = 0
 	s.newjob = true
+
+	// No timeout for the next read awaiting beginning of the next job
+	if err := s.conn.SetReadDeadline(time.Time{}); err != nil {
+		log.Printf("ERROR: couldn't clear read deadline: %v", err)
+	}
 }

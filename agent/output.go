@@ -73,7 +73,10 @@ func (o *pdfOutputHandler) EndOfJob(jobinfo string) {
 		}
 	}()
 
-	jobfilename := fmt.Sprintf("v1403-%s-%s.pdf", jobinfo,
+	if jobinfo != "" {
+		jobinfo = jobinfo + "-"
+	}
+	jobfilename := fmt.Sprintf("v1403-%s%s.pdf", jobinfo,
 		time.Now().UTC().Format("20060102T030405"))
 	filename := filepath.Join(o.outputDir, jobfilename)
 

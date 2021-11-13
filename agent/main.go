@@ -19,7 +19,6 @@ package main
 // along with virtual1403. If not, see <https://www.gnu.org/licenses/>.
 
 import (
-	"bufio"
 	_ "embed"
 	"errors"
 	"flag"
@@ -192,7 +191,7 @@ func handleHercules(address string, handler scanner.PrinterHandler) {
 	defer conn.Close()
 	log.Printf("INFO:  Connection successful.\n")
 
-	err = scanner.Scan(bufio.NewReader(conn), handler, *trace)
+	err = scanner.Scan(conn, handler, *trace)
 	if err == io.EOF {
 		// we're done!
 		log.Printf("INFO:  Hercules disconnected.\n")
