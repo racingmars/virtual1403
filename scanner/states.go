@@ -24,6 +24,7 @@ import "log"
 // characters into the current line until we get a control character or
 // overflow the current line.
 func getNextByte(s *scanner, b byte) stateFunc {
+	wasNewJob := s.newjob
 	if s.newjob {
 		log.Printf("INFO:  receiving data from Hercules for new print job")
 		s.newjob = false
@@ -43,6 +44,16 @@ func getNextByte(s *scanner, b byte) stateFunc {
 	case charFF:
 		if s.trace {
 			log.Println("TRACE: scanner got FF in getNextByte")
+		}
+		if wasNewJob {
+			// if the very first byte we receive is a form feed, then it's
+			// probably from VM ejecting the previous job (since, for some
+			// reason, it doesn't eject jobs right after they finish). We're
+			// already starting on a new page, so we'll just suppress it.
+			if s.trace {
+				log.Println("TRACE: ignoring FF at beginning of job")
+			}
+			return getNextByte
 		}
 		s.emitLineAndPage()
 		return getNextByte

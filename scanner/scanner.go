@@ -88,6 +88,17 @@ func Scan(conn net.Conn, handler PrinterHandler, trace bool) error {
 			log.Printf(
 				"ERROR: read 0 bytes when expecting 1; continuing read loop")
 		} else {
+			if nextByte[0] == 0xFF {
+				// This seems to be a control character that VM emits the
+				// first time it prints to a printer after IPL. Hercules'
+				// ASCII<->EBCDIC mapping has 0xFF on both sides. In
+				// ISO-8859-1, 0xFF is ÿ, but that's clearly not a correct
+				// mapping from any EBCDIC codepage. Thus, we'll just drop it
+				// as a control character that we don't need since it's
+				// clearly not meant to be a character from any typical
+				// mainframe print job.
+				continue
+			}
 			s.nextfunc = s.nextfunc(&s, nextByte[0])
 		}
 	}
@@ -102,7 +113,7 @@ func (s *scanner) emitLine(linefeed bool) {
 
 	// We need to build a valid UTF-8 string. For now we'll handle a couple
 	// mainframe-specific characters we might see, but someday probably need
-	// to make a general Hecules-default-to-UTF-8 table.
+	// to make a general Hercules-default-to-UTF-8 table.
 	utf8runes := make([]rune, 0, len(s.curline))
 	for i := 0; i < s.pos; i++ {
 		var r rune
