@@ -37,6 +37,19 @@ func getNextByte(s *scanner, b byte) stateFunc {
 		}
 		return haveLF
 	case charCR:
+		if wasNewJob {
+			// if the very first byte we receive is a carriage return, then
+			// it's probably from VM resetting the carriage after the previous
+			// job. We're already in a new job and the carriage is at position
+			// 0, so we'll count this as still being a new job (as we still
+			// want to trigger the special beginning-of-job form feed
+			// handling, since that's probably what's coming next).
+			if s.trace {
+				log.Println("TRACE: ignoring CR at beginning of job")
+			}
+			s.newjob = true
+			return getNextByte
+		}
 		if s.trace {
 			log.Println("TRACE: scanner got CR in getNextByte")
 		}

@@ -97,6 +97,9 @@ func Scan(conn net.Conn, handler PrinterHandler, trace bool) error {
 				// as a control character that we don't need since it's
 				// clearly not meant to be a character from any typical
 				// mainframe print job.
+				if s.trace {
+					log.Println("TRACE: ignoring 0xFF control character")
+				}
 				continue
 			}
 			s.nextfunc = s.nextfunc(&s, nextByte[0])
