@@ -7,6 +7,10 @@ listen_port: 8000
 tls_listen_port: 8443
 tls_domain: my1403.example.com
 
+# server_base_url is the base URL for this server, without any trailing slashes
+# e.g.: https://my.server.com
+server_base_url: https://localhost:8443/
+
 # Path to database file to store application data.
 database_file: virtual1403.db
 
@@ -18,9 +22,19 @@ create_admin: admin@example.com
 # font_file is an optional font file to use
 #font_file: font.ttf
 
-# server_base_url is the base URL for this server, without any trailing slashes
-# e.g.: https://my.server.com
-server_base_url: https://localhost:8443/
+# Quota - jobs and page count a user is allowed during the quota period.
+# Period is in hours. Values <= 0 disable the job and/or page quota.
+quota_jobs: 25
+quota_pages: 1000
+quota_period: 24 # hours
+
+# To prevent users trying to DoS the server with a huge number of overstrike
+# lines (thus working around the page quota while sending the server nearly
+# unlimited amounts of data), each individual job may be limited to a number
+# of print directives. For a 62-lines-per-page virtual printer, a good limit
+# here might be 62 * pages quota / 2, assuming users won't typically try to
+# blow their entire pages quota on a single job.
+max_lines_per_job: 31000
 
 mail_config:
   from_address: virtual.1403@example.com

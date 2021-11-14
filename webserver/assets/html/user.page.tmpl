@@ -10,19 +10,34 @@
     {{ template "adminlinks" . }}
 {{ end }}
 
-<p>Welcome {{.name}} ({{.email}}). You have printed a total of {{.pageCount}} page{{if ne .pageCount 1}}s{{end}} over {{.jobCount}} job{{ if ne .jobCount 1}}s{{end}}!</p>
+<p class="block">Welcome {{.name}} ({{.email}}). You have printed a total of {{.pageCount}} page{{if ne .pageCount 1}}s{{end}} over {{.jobCount}} job{{ if ne .jobCount 1}}s{{end}}.</p>
+
+<p class="block">{{.quotaMessage}} Your current charge against your quota is {{.chargedJobs}} job{{if ne .chargedJobs 1}}s{{end}} and {{.chargedPages}} page{{if ne .chargedPages 1}}s{{end}}.</p>
+
+{{ with .quotaViolation }}
+<div class="columns">
+  <div class="column is-three-fifths is-offset-one-fifth">
+    <div class="message is-warning">
+        <div class="message-header">Quota Exceeded</div>
+        <div class="message-body">
+            <p>Your account has printed enough jobs or pages to exceed your quota. Print jobs will not be accepted until time has passed and more quota becomes available.<p>
+        </div>
+    </div>
+  </div>
+</div>
+{{ end }}
 
 {{ with .verifySuccess }}
 <div class="columns">
   <div class="column is-three-fifths is-offset-one-fifth">
     <div class="message is-success">
-    <div class="message-header">Email verification success</div>
-    <div class="message-body">
-        <p>{{ . }}<p>
+        <div class="message-header">Email verification success</div>
+        <div class="message-body">
+            <p>{{ . }}<p>
+        </div>
     </div>
-    </div>
-    </div>
-    </div>
+  </div>
+</div>
 {{ end }}
 
 {{ if .verified }}
@@ -62,7 +77,7 @@ access_key: "{{.apiKey}}"</pre></p>
     </div>
 {{ end }}
 
-<div class="columns">
+<div class="block columns">
 <div class="column">
 <h3 class="subtitle">Change password</h3>
 {{with .passwordError}}

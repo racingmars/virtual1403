@@ -19,7 +19,6 @@ package main
 // along with virtual1403. If not, see <https://www.gnu.org/licenses/>.
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -127,8 +126,23 @@ func (app *application) userInfo(w http.ResponseWriter, r *http.Request) {
 	// Get 10 most recent jobs the user printed
 	joblog, err := app.db.GetUserJobLog(u.Email, 10)
 	if err != nil {
-		log.Printf("ERR  db error getting user joblog for %s: %v", u.Email, err)
+		log.Printf("ERROR: db error getting user joblog for %s: %v",
+			u.Email, err)
 		// We'll allow the page to render, it'll just have an empty job log
+	}
+
+	// Is user currently in violation of quota?
+	jobCount, pageCount, quotaErr := app.checkQuota(u.Email)
+	if !(quotaErr == nil || quotaErr == errQuotaExceeded) {
+		// database error checking quota... we'll set error back to nil for UI
+		log.Printf("ERROR: db error in quota check for %s: %v",
+			u.Email, quotaErr)
+		quotaErr = nil
+	}
+
+	quotaMessage := app.quotaString()
+	if u.Unlimited {
+		quotaMessage = "You are not subject to quotas on this system."
 	}
 
 	responseValues := map[string]interface{}{
@@ -146,6 +160,10 @@ func (app *application) userInfo(w http.ResponseWriter, r *http.Request) {
 		"verifyResendError":   app.session.Get(r, "verifyResendError"),
 		"verifyResendSuccess": app.session.Get(r, "verifyResendSuccess"),
 		"joblog":              joblog,
+		"quotaMessage":        quotaMessage,
+		"quotaViolation":      quotaErr,
+		"chargedPages":        pageCount,
+		"chargedJobs":         jobCount,
 	}
 
 	if responseValues["passwordError"] != nil {
@@ -318,6 +336,7 @@ func (app *application) adminEditUser(w http.ResponseWriter, r *http.Request) {
 		"email":     user.Email,
 		"admin":     user.Admin,
 		"active":    user.Enabled,
+		"unlimited": user.Unlimited,
 		"pageCount": user.PageCount,
 		"jobCount":  user.JobCount,
 		"joblog":    joblog,
@@ -355,13 +374,12 @@ func (app *application) adminEditUserPost(w http.ResponseWriter,
 	}
 
 	if err := r.ParseForm(); err != nil {
-		log.Printf("ERROR couldn't parse update user form: %v", err)
+		log.Printf("ERROR: couldn't parse update user form: %v", err)
 		http.Error(w, "couldn't parse update form", http.StatusInternalServerError)
 		return
 	}
 
 	email := r.Form.Get("email")
-	fmt.Printf("EMAIL: %s\n", email)
 
 	user, err := app.db.GetUser(email)
 	if err == db.ErrNotFound {
@@ -369,24 +387,36 @@ func (app *application) adminEditUserPost(w http.ResponseWriter,
 		return
 	}
 	if err != nil {
-		log.Printf("ERROR error getting user: %v", err)
+		log.Printf("ERROR: error getting user: %v", err)
 		http.Error(w, "DB error getting user record",
 			http.StatusInternalServerError)
 		return
 	}
 
 	newPassword := r.Form.Get("new-password")
+	newName := r.Form.Get("name")
 	active := r.Form.Get("active")
+	unlimited := r.Form.Get("unlimited")
 	admin := r.Form.Get("admin")
 
 	if newPassword != "" {
 		user.SetPassword(newPassword)
 	}
 
+	if newName != "" {
+		user.FullName = newName
+	}
+
 	if active == "yes" {
 		user.Enabled = true
 	} else {
 		user.Enabled = false
+	}
+
+	if unlimited == "yes" {
+		user.Unlimited = true
+	} else {
+		user.Unlimited = false
 	}
 
 	if admin == "yes" {
@@ -396,12 +426,12 @@ func (app *application) adminEditUserPost(w http.ResponseWriter,
 	}
 
 	if err := app.db.SaveUser(user); err != nil {
-		log.Printf("ERROR saving user %s: %v", user.Email, err)
+		log.Printf("ERROR: saving user %s: %v", user.Email, err)
 		http.Error(w, "DB error saving user", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("INFO  %s updated user %s", u.Email, user.Email)
+	log.Printf("INFO:  %s updated user %s", u.Email, user.Email)
 
 	http.Redirect(w, r, "users", http.StatusSeeOther)
 }

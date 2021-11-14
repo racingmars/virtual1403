@@ -103,7 +103,7 @@ func New1403(font []byte) (Job, error) {
 	return j, nil
 }
 
-func (job *virtual1403) AddLine(s string, linefeed bool) {
+func (job *virtual1403) AddLine(s string, linefeed bool) int {
 	if job.curLine >= maxLinesPerPage {
 		job.NewPage()
 	}
@@ -117,9 +117,10 @@ func (job *virtual1403) AddLine(s string, linefeed bool) {
 	if linefeed {
 		job.curLine++
 	}
+	return job.pages
 }
 
-func (job *virtual1403) NewPage() {
+func (job *virtual1403) NewPage() int {
 	job.pdf.AddPage()
 	job.pdf.UseTemplate(job.background)
 	job.pdf.SetFont("userfont", "", v1430FontSize)
@@ -127,6 +128,7 @@ func (job *virtual1403) NewPage() {
 	// printable lines.
 	job.curLine = 5
 	job.pages++
+	return job.pages
 }
 
 func (job *virtual1403) EndJob(w io.Writer) (int, error) {

@@ -33,11 +33,13 @@ type Job interface {
 	// AddLine adds one line of output to the print job. linefeed indicates
 	// whether, in addition to a carriage return action at the end of the
 	// line, the printer should advance by one line. (linefeed=false will
-	// cause the next line to overtype the current line.)
-	AddLine(text string, linefeed bool)
+	// cause the next line to overtype the current line.) Returns the current
+	// number of pages in the job so far.
+	AddLine(text string, linefeed bool) int
 
 	// NewPage indicates that the print job encountered a form feed character.
-	NewPage()
+	// Returns the current number of pages in the job so far.
+	NewPage() int
 
 	// EndJob instructs the virtual printer to end the job and write the
 	// output (e.g. the PDF of all lines and pages for this job) to the

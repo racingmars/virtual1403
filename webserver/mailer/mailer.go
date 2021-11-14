@@ -33,6 +33,7 @@ import (
 )
 
 type Config struct {
+	Disable     bool   `yaml:"disable"`
 	FromAddress string `yaml:"from_address"`
 	Server      string `yaml:"server"`
 	Port        int    `yaml:"port"`
@@ -42,6 +43,11 @@ type Config struct {
 
 func Send(config Config, to, subject, body, filename string,
 	attachment []byte) error {
+
+	// For testing the web service without generating any actual mail
+	if config.Disable {
+		return nil
+	}
 
 	var buf bytes.Buffer
 

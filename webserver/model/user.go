@@ -34,6 +34,7 @@ type User struct {
 	Admin                 bool
 	Verified              bool
 	Enabled               bool
+	Unlimited             bool
 	JobCount              int
 	PageCount             int
 	LastJob               time.Time

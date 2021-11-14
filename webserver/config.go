@@ -32,14 +32,18 @@ import (
 )
 
 type ServerConfig struct {
-	DatabaseFile  string        `yaml:"database_file"`
-	CreateAdmin   string        `yaml:"create_admin"`
-	FontFile      string        `yaml:"font_file"`
-	ListenPort    int           `yaml:"listen_port"`
-	TLSListenPort int           `yaml:"tls_listen_port"`
-	TLSDomain     string        `yaml:"tls_domain"`
-	BaseURL       string        `yaml:"server_base_url"`
-	MailConfig    mailer.Config `yaml:"mail_config"`
+	DatabaseFile   string        `yaml:"database_file"`
+	CreateAdmin    string        `yaml:"create_admin"`
+	FontFile       string        `yaml:"font_file"`
+	ListenPort     int           `yaml:"listen_port"`
+	TLSListenPort  int           `yaml:"tls_listen_port"`
+	TLSDomain      string        `yaml:"tls_domain"`
+	BaseURL        string        `yaml:"server_base_url"`
+	MailConfig     mailer.Config `yaml:"mail_config"`
+	QuotaJobs      int           `yaml:"quota_jobs"`
+	QuotaPages     int           `yaml:"quota_pages"`
+	QuotaPeriod    int           `yaml:"quota_period"`
+	MaxLinesPerJob int           `yaml:"max_lines_per_job"`
 }
 
 func readConfig(path string) (ServerConfig, []error) {

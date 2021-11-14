@@ -116,17 +116,30 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 	authHdr = strings.TrimPrefix(authHdr, "Bearer ")
 	user, err := a.db.GetUserForAccessKey(authHdr)
 	if err != nil {
-		log.Printf("INFO  unauthorized web service call from %s",
+		log.Printf("INFO:  unauthorized web service call from %s",
 			r.RemoteAddr)
 		http.Error(w, "Authentication failure", http.StatusUnauthorized)
 		return
 	}
 	if !user.Enabled {
 		http.Error(w, "User's account is disabled", http.StatusForbidden)
+		return
 	}
 	if !user.Verified {
 		http.Error(w, "User's email address has not been verified",
 			http.StatusForbidden)
+		return
+	}
+
+	// Enforce quotas
+	if _, _, err := a.checkQuota(user.Email); err == errQuotaExceeded {
+		log.Printf("INFO:  user %s attempted to print over quota", user.Email)
+		http.Error(w, a.quotaString(), http.StatusTooManyRequests)
+		return
+	} else if err != nil {
+		log.Printf("ERROR: db error calculating user quota: %v", err)
+		http.Error(w, "internal db error", http.StatusInternalServerError)
+		return
 	}
 
 	// Content must be zstd-compressed.
@@ -152,6 +165,7 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Unable to begin zstd decoding: %v", err),
 			http.StatusBadRequest)
+		return
 	}
 	defer d.Close()
 
@@ -165,12 +179,21 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 
 	// Process the directives in the request body and send them to the
 	// virtual printer.
-	jobinfo, err := processPrintDirectives(d, job)
+	pageQuota := a.quotaPages
+	maxLines := a.maxLinesPerJob
+	// Unlimited users are trusted and we apply no limits
+	if user.Unlimited {
+		pageQuota = 0
+		maxLines = 0
+	}
+	jobinfo, err := processPrintDirectives(d, job, pageQuota,
+		maxLines)
 	if err != nil {
 		log.Printf("INFO:  invalid print directives from %s: %v",
 			user.Email, err)
 		http.Error(w, fmt.Sprintf("Invalid data: %v", err),
 			http.StatusBadRequest)
+		return
 	}
 
 	// Create the PDF
@@ -206,11 +229,11 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("INFO  sent %d pages to %s", pagecount, user.Email)
+	log.Printf("INFO:  sent %d pages to %s", pagecount, user.Email)
 
 	// Try to log the job to the database
 	if err = a.db.LogJob(user.Email, jobinfo, pagecount); err != nil {
-		log.Printf("ERROR couldn't log job: %v", err)
+		log.Printf("ERROR: couldn't log job: %v", err)
 	}
 
 	// HTTP 200 will be returned if we make it this far.
@@ -220,9 +243,13 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 var jobInfoRegex = regexp.MustCompile(`^[a-zA-z0-9_]{0,25}$`)
 
 // processPrintDirectives will apply print directives to the virtual printer
-// job, returning an error if the input data is invalid.
-func processPrintDirectives(r io.Reader, job vprinter.Job) (string, error) {
+// job, returning an error if the input data is invalid. Processing will stop
+// after maxpages if maxpages > 0 or after maxlines if maxlines > 0.
+func processPrintDirectives(r io.Reader, job vprinter.Job,
+	maxpages, maxlines int) (string, error) {
+
 	var jobinfo string
+	var lines int
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -244,13 +271,14 @@ func processPrintDirectives(r io.Reader, job vprinter.Job) (string, error) {
 		// Trim to 132 runes
 		param = trimToRuneLen(param, 132)
 
+		var pages int
 		switch directive {
 		case "L:":
-			job.AddLine(param, true)
+			pages = job.AddLine(param, true)
 		case "O:":
-			job.AddLine(param, false)
+			pages = job.AddLine(param, false)
 		case "P:":
-			job.NewPage()
+			pages = job.NewPage()
 		case "J:":
 			if !jobInfoRegex.MatchString(param) {
 				return "", errors.New("invalid job data directive")
@@ -258,6 +286,14 @@ func processPrintDirectives(r io.Reader, job vprinter.Job) (string, error) {
 			jobinfo = param
 		default:
 			return "", errors.New("invalid directive received")
+		}
+		lines++
+
+		if maxpages > 0 && pages > maxpages {
+			break
+		}
+		if maxlines > 0 && lines > maxlines {
+			break
 		}
 	}
 	if err := scanner.Err(); err != nil {

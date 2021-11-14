@@ -41,12 +41,16 @@ import (
 )
 
 type application struct {
-	font          []byte
-	db            db.DB
-	mailconfig    mailer.Config
-	serverBaseURL string
-	session       *sessions.Session
-	templateCache map[string]*template.Template
+	font           []byte
+	db             db.DB
+	mailconfig     mailer.Config
+	serverBaseURL  string
+	session        *sessions.Session
+	templateCache  map[string]*template.Template
+	quotaJobs      int
+	quotaPages     int
+	quotaPeriod    time.Duration
+	maxLinesPerJob int
 }
 
 //go:embed IBMPlexMono-Regular.ttf
@@ -62,27 +66,57 @@ func main() {
 	config, errs := readConfig("config.yaml")
 	if len(errs) > 0 {
 		for _, err := range errs {
-			log.Printf("ERROR configuration: %v", err)
+			log.Printf("ERROR: configuration: %v", err)
 		}
-		log.Fatal("FATAL configuration errors")
+		log.Fatal("FATAL: configuration errors")
 	}
 
 	// If the user requested a font file, see if we can load it. Otherwise,
 	// use our standard embedded font.
 	if config.FontFile != "" {
-		log.Printf("INFO  loading font %s", config.FontFile)
+		log.Printf("INFO:  loading font %s", config.FontFile)
 		app.font, err = vprinter.LoadFont(config.FontFile)
 		if err != nil {
-			log.Fatalf("FATAL unable to load font: %v", err)
+			log.Fatalf("FATAL: unable to load font: %v", err)
 		}
 	} else {
 		app.font = defaultFont
 	}
 
+	// Copy the configured quota values to the application state
+	app.maxLinesPerJob = config.MaxLinesPerJob
+	if app.maxLinesPerJob <= 0 {
+		log.Printf("WARN:  no max_lines_per_job, individual job size " +
+			"will be unbounded")
+	} else {
+		log.Printf("INFO:  max_lines_per_job is %d", app.maxLinesPerJob)
+	}
+
+	app.quotaJobs = config.QuotaJobs
+	app.quotaPages = config.QuotaPages
+	if app.quotaJobs <= 0 && app.quotaPages <= 0 {
+		log.Printf("WARN:  no quotas are set; all users will " +
+			"be permitted unlimited use")
+	}
+	if app.quotaJobs > 0 {
+		log.Printf("INFO:  user jobs quota is %d", app.quotaJobs)
+	}
+	if app.quotaPages > 0 {
+		log.Printf("INFO:  user pages quota is %d", app.quotaPages)
+	}
+
+	if config.QuotaPeriod <= 0 {
+		log.Printf("WARN:  no valid quota_period; setting to 24 hours")
+		config.QuotaPeriod = 24
+	}
+
+	app.quotaPeriod = time.Duration(config.QuotaPeriod) * time.Hour
+	log.Printf("INFO:  quota period is %s", app.quotaPeriod.String())
+
 	// Initialize HTML template cache for UI
 	templateCache, err := newTemplateCache()
 	if err != nil {
-		log.Fatalf("FATAL unable to load templates: %v", err)
+		log.Fatalf("FATAL: unable to load templates: %v", err)
 	}
 	app.templateCache = templateCache
 
@@ -97,7 +131,7 @@ func main() {
 
 	if config.CreateAdmin != "" {
 		if err := app.createAdmin(config.CreateAdmin); err != nil {
-			log.Fatalf("FATAL unable to create admin user: %v", err)
+			log.Fatalf("FATAL: unable to create admin user: %v", err)
 		}
 	}
 
@@ -106,9 +140,9 @@ func main() {
 	// Get session cookie secret key from DB and initialize session manager
 	sessionSecret, err := app.db.GetSessionSecret()
 	if err != nil {
-		log.Fatalf("FATAL unable to get session secret key: %v", err)
+		log.Fatalf("FATAL: unable to get session secret key: %v", err)
 	}
-	log.Printf("INFO  got session secret: %s",
+	log.Printf("INFO:  got session secret: %s",
 		hex.EncodeToString(sessionSecret))
 	app.session = sessions.New(sessionSecret)
 	app.session.Lifetime = 3 * time.Hour
@@ -144,7 +178,7 @@ func main() {
 
 	// If running plain HTTP service, we're ready to go
 	if config.TLSListenPort <= 0 {
-		log.Printf("INFO  Starting plain HTTP server on :%d",
+		log.Printf("INFO:  Starting plain HTTP server on :%d",
 			config.ListenPort)
 		err = http.ListenAndServe(fmt.Sprintf(":%d", config.ListenPort),
 			handlers.CombinedLoggingHandler(os.Stdout, mux))
@@ -155,7 +189,7 @@ func main() {
 	// Otherwise we set up a redirect on plain HTTP port and host w/ TLS and
 	// autocert.
 	go func() {
-		log.Printf("INFO  Starting plain HTTP redirect server on: %d",
+		log.Printf("INFO:  Starting plain HTTP redirect server on: %d",
 			config.ListenPort)
 		err := http.ListenAndServe(fmt.Sprintf(":%d", config.ListenPort),
 			handlers.CombinedLoggingHandler(os.Stdout, http.HandlerFunc(
@@ -175,7 +209,7 @@ func main() {
 		TLSConfig: m.TLSConfig(),
 		Handler:   handlers.CombinedLoggingHandler(os.Stdout, mux),
 	}
-	log.Printf("INFO  Starting TLS HTTP server on %s", s.Addr)
+	log.Printf("INFO:  Starting TLS HTTP server on %s", s.Addr)
 	if err := s.ListenAndServeTLS("", ""); err != nil {
 		log.Fatal(err)
 	}
