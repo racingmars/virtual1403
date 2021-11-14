@@ -51,6 +51,7 @@ type application struct {
 	quotaPages     int
 	quotaPeriod    time.Duration
 	maxLinesPerJob int
+	printerSeats   chan bool
 }
 
 //go:embed IBMPlexMono-Regular.ttf
@@ -112,6 +113,14 @@ func main() {
 
 	app.quotaPeriod = time.Duration(config.QuotaPeriod) * time.Hour
 	log.Printf("INFO:  quota period is %s", app.quotaPeriod.String())
+
+	// If there is a limit on concurrent print job, set up the available user
+	// seats
+	if config.ConcurrentPrintJobs > 0 {
+		log.Printf("INFO:  limiting concurrent print jobs to %d",
+			config.ConcurrentPrintJobs)
+		app.printerSeats = make(chan bool, config.ConcurrentPrintJobs)
+	}
 
 	// Initialize HTML template cache for UI
 	templateCache, err := newTemplateCache()

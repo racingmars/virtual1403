@@ -131,6 +131,19 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Now that we have confirmed this is a valid user, if we are limiting
+	// concurrency of the print service, we will wait until a seat is
+	// available.
+	if a.printerSeats != nil {
+		// Writing to the channel will block if the queue is full.
+		a.printerSeats <- true
+
+		// when this function ends, we release the user's seat
+		defer func() {
+			<-a.printerSeats
+		}()
+	}
+
 	// Enforce quotas
 	if _, _, err := a.checkQuota(user.Email); err == errQuotaExceeded {
 		log.Printf("INFO:  user %s attempted to print over quota", user.Email)

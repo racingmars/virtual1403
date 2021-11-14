@@ -90,7 +90,12 @@ func Send(config Config, to, subject, body, filename string,
 		return err
 	}
 
-	auth := smtp.PlainAuth("", config.Username, config.Password, config.Server)
+	// default nil auth will work for SMTP servers that don't require auth
+	var auth smtp.Auth
+	if config.Username != "" || config.Password != "" {
+		auth = smtp.PlainAuth("", config.Username, config.Password,
+			config.Server)
+	}
 	err = smtp.SendMail(fmt.Sprintf("%s:%d", config.Server, config.Port),
 		auth, config.FromAddress, []string{to}, buf.Bytes())
 	if err != nil {

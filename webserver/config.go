@@ -32,18 +32,19 @@ import (
 )
 
 type ServerConfig struct {
-	DatabaseFile   string        `yaml:"database_file"`
-	CreateAdmin    string        `yaml:"create_admin"`
-	FontFile       string        `yaml:"font_file"`
-	ListenPort     int           `yaml:"listen_port"`
-	TLSListenPort  int           `yaml:"tls_listen_port"`
-	TLSDomain      string        `yaml:"tls_domain"`
-	BaseURL        string        `yaml:"server_base_url"`
-	MailConfig     mailer.Config `yaml:"mail_config"`
-	QuotaJobs      int           `yaml:"quota_jobs"`
-	QuotaPages     int           `yaml:"quota_pages"`
-	QuotaPeriod    int           `yaml:"quota_period"`
-	MaxLinesPerJob int           `yaml:"max_lines_per_job"`
+	DatabaseFile        string        `yaml:"database_file"`
+	CreateAdmin         string        `yaml:"create_admin"`
+	FontFile            string        `yaml:"font_file"`
+	ListenPort          int           `yaml:"listen_port"`
+	TLSListenPort       int           `yaml:"tls_listen_port"`
+	TLSDomain           string        `yaml:"tls_domain"`
+	BaseURL             string        `yaml:"server_base_url"`
+	MailConfig          mailer.Config `yaml:"mail_config"`
+	QuotaJobs           int           `yaml:"quota_jobs"`
+	QuotaPages          int           `yaml:"quota_pages"`
+	QuotaPeriod         int           `yaml:"quota_period"`
+	MaxLinesPerJob      int           `yaml:"max_lines_per_job"`
+	ConcurrentPrintJobs int           `yaml:"concurrent_print_jobs"`
 }
 
 func readConfig(path string) (ServerConfig, []error) {
@@ -100,12 +101,6 @@ func readConfig(path string) (ServerConfig, []error) {
 	if c.MailConfig.Port < 1 || c.MailConfig.Port > 65535 {
 		errs = append(errs, fmt.Errorf("mail_config.port (%d) is invalid",
 			c.MailConfig.Port))
-	}
-	if c.MailConfig.Username == "" {
-		errs = append(errs, fmt.Errorf("mail_config.username is required"))
-	}
-	if c.MailConfig.Password == "" {
-		errs = append(errs, fmt.Errorf("mail_config.password is required"))
 	}
 
 	return c, errs
