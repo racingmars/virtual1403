@@ -104,6 +104,6 @@ func (o *onlineOutputHandler) EndOfJob(jobinfo string) {
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		log.Printf("INFO:  Print API response status: %s", resp.Status)
 	} else {
-		log.Printf("ERROR: Print API response static: %s", resp.Status)
+		log.Printf("ERROR: Print API response status: %s", resp.Status)
 	}
 }
