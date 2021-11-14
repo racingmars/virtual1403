@@ -1,0 +1,62 @@
+{{template "base" .}}
+
+{{define "title"}}How to Use Virtual1403{{end}}
+
+{{define "main"}}
+
+<p class="block"><a href="/">← Return Home</a></p>
+
+<div class="content">
+<p>You can either host your own Virtual1403 Server or use this very server you are connected to now.</p>
+<p>Running your own server entails several steps such as obtaining https certificates, obtaining a 1403 font license (or using another font of your choosing), and having your own web accessible server.</p>
+
+<h2>Using the hosted version of Virtual1403</h2>
+
+<h3>Setup steps to send your mainframe listings to Virtual1403</h3>
+<ol>
+    <li>Obtain the virtual1403 agent binary for your environment (Linux, macOS, or Windows). Or compile from source.</li>
+    <li>Obtain the ready-made config.yaml file with your personal API key from your user page on this website.</li>
+    <li>Put the config.yaml with your personal - and secret - API key in the directory of the virtual1403 agent binary.</li>
+    <li>Inside the Hercules (or Hyperion) emulator turn your 1403 printer into a socket printer (see below).</li>
+    <li>Start the virtual1403 agent and check if it connected to Hercules.</li>
+    <li>If needed, (re)start the printer in JES with <code>$SPRT1</code>.</li>
+    <li>Submit your jobs with <code>MSGCLASS=A</code> and check your inbox for the listing.</li>
+</ol>
+
+<h2>Configuring TK4- MVS 3.8j</h2>
+
+<h3>On the Hercules/Hyperion console</h3>
+
+<p>Enter the following Hercules command (this is not an MVS or JES command!):</p>
+<p><pre>devinit 00E localhost:1403 sockdev</pre></p>
+<p><img src="/static/setup-hercules-devinit.jpg" width="641" height="30" alt="Hercules console showing devinit command"></p>
+
+<h3>In your operating system shell</h3>
+
+<p>Now start virtual1403 and let it connect to the 1403 socket interface you just activated on Hercules.</p>
+<p><img src="/static/setup-shell-command.jpg" width="636" height="246" alt="Command window showing virtual1403 agent starting"></p>
+
+<h3>You may need to restart your JES2 printer</h3>
+
+<p>Start the printer in JES with the command <code>$SPRT1</code> on the MVS console.</p>
+<p>Some (later) version of MVS may require you to enter this command twice.</p>
+<p>NEED IMAGE HERE: <!-- <img src="jes2_restartprinter.jpg"> --></p>
+
+<h3>Now you can submit jobs for printing and have them emailed to you</h3>
+
+<p>Make sure to use <code>MSGCLASS=A</code> on your JOB card to print to Virtual1403.</p>
+<p><img src="/static/setup-job-msgclass.jpg" width="448" height="104" alt="JCL job card showing MSGCLASS=A"></p>
+
+<h3>Disable Recurring MF/1 Output</h3>
+
+<p>TK4- has MF/1 set up (a performance monitoring tool, the predecessor of RMF on z/OS), which prints at regular intervals to MSGCLASS=A.</p>
+<p><strong>We don't want that because you will get all those jobs emailed to you!</strong> Let's disable it with the MVS console command <code>P MF1</code></p>
+<p><img src="/static/setup-disable-mf1.jpg" width="636" height="28" alt="Hercules console showing the command '/P MF1' entered"></p>
+
+<h2>User Limits</h2>
+
+<p>{{.quotaString}} Once you go over your quota a warning will show up on your user page.</p>
+
+</div> <!-- content -->
+
+{{end}}

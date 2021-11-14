@@ -55,6 +55,13 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	app.render(w, r, "home.page.tmpl", responseVars)
 }
 
+// docsSetup serves the setup documentation page. This is unauthenticated.
+func (app *application) docsSetup(w http.ResponseWriter, r *http.Request) {
+	responseVars := make(map[string]interface{})
+	responseVars["quotaString"] = app.quotaString()
+	app.render(w, r, "docs.page.tmpl", responseVars)
+}
+
 // login handles user login requests and if successful sets the session cookie
 // user value to the logged in user's email address.
 func (app *application) login(w http.ResponseWriter, r *http.Request) {
