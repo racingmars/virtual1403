@@ -172,6 +172,8 @@ func main() {
 		app.adminEditUser)))
 	mux.Handle("/admin/doedituser", app.session.Enable(http.HandlerFunc(
 		app.adminEditUserPost)))
+	mux.Handle("/admin/deleteuser", app.session.Enable(http.HandlerFunc(
+		app.adminDeleteUser)))
 
 	// The print API -- not part of the UI
 	mux.Handle("/print", http.HandlerFunc(app.printjob))

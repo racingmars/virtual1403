@@ -12,10 +12,10 @@
 
 
 <h3 class="subtitle">User: {{.email}}</h3>
-<p><a href="users">← Back to users list</a></p>
-<p>User has printed a total of {{.pageCount}} page{{if ne .pageCount 1}}s{{end}} over {{.jobCount}} job{{ if ne .jobCount 1}}s{{end}}.</p>
+<p class="block"><a href="users">← Back to users list</a></p>
+<p class="block">User has printed a total of {{.pageCount}} page{{if ne .pageCount 1}}s{{end}} over {{.jobCount}} job{{ if ne .jobCount 1}}s{{end}}.</p>
 
-<form method="post" action="doedituser">
+<form method="post" action="doedituser" class="block">
     <div class="field is-horizontal">
         <div class="field-label is-normal">
             <label class="label" for="email">Email</label>
@@ -114,7 +114,7 @@
     </div>
 </form>
 
-<div class="column">
+<div class="column block">
 <h3 class="subtitle">Recent print jobs</h2>
 <table class="table">
     <thead>
@@ -130,6 +130,14 @@
         {{ end }}
     </tbody>
 </table>
+</div>
+
+<div class="block">
+<form method="post" action="deleteuser">
+<input type="hidden" name="email" value="{{.email}}">
+<input type="submit" class="button is-danger" value="Delete User"
+    onclick="return confirm('Really delete user {{.email}}?')">
+</form>
 </div>
 
 {{end}}

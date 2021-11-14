@@ -211,11 +211,26 @@ func (db *boltimpl) DeleteUser(email string) error {
 			return err
 		}
 
-		// Now we just delete access key and user
+		// Now we delete access key and user
 		accessBucket.Delete([]byte(olduser.AccessKey))
 		userBucket.Delete([]byte(strings.ToLower(email)))
 
-		// TODO: should we delete job log entries for this user too?
+		// Need to delete job log entries and job log index entries. We will
+		// walk through the job log index for this user, and delete the index
+		// entry and corresponding job log entry.
+		logBucket := tx.Bucket([]byte(jobLogBucketName))
+		logIdxBucket := tx.Bucket([]byte(jobLogUserIndexName))
+		c := logIdxBucket.Cursor()
+		// Log log index has keys with user's email, followed by null byte,
+		// followed by the key of the job log entry. We want to visit every
+		// key with the user's email address followed by null byte.
+		id := []byte(strings.ToLower(email))
+		id = append(id, 0)
+		for k, _ := c.Seek(id); bytes.HasPrefix(k, id); k, _ = c.Next() {
+			entryid := bytes.TrimPrefix(k, id)
+			logBucket.Delete(entryid)
+			c.Delete()
+		}
 
 		return nil
 	})

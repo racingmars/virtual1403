@@ -436,6 +436,52 @@ func (app *application) adminEditUserPost(w http.ResponseWriter,
 	http.Redirect(w, r, "users", http.StatusSeeOther)
 }
 
+// adminDeleteUser lets logged-in administrators delete a user.
+func (app *application) adminDeleteUser(w http.ResponseWriter,
+	r *http.Request) {
+
+	// Only POST requests to this handler
+	if r.Method != http.MethodPost {
+		http.Error(w, "Bad method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	u := app.checkLoggedInUser(r)
+	if u == nil {
+		// No logged in user
+		app.session.Destroy(r)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Only allow this for administrators
+	if !u.Admin {
+		w.WriteHeader(http.StatusForbidden)
+		io.WriteString(w, "This action is only available to administrators.")
+		return
+	}
+
+	r.ParseForm()
+	email := r.Form.Get("email")
+	userToDelete, err := app.db.GetUser(email)
+	if err == db.ErrNotFound {
+		http.Error(w, "user does not exist", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		app.serverError(w, err.Error())
+		return
+	}
+
+	if err := app.db.DeleteUser(userToDelete.Email); err != nil {
+		app.serverError(w, err.Error())
+		return
+	}
+	log.Printf("INFO:  %s deleted user %s", u.Email, userToDelete.Email)
+
+	http.Redirect(w, r, "users", http.StatusSeeOther)
+}
+
 // signup is the HTTP POST handler for /signup, to create new user accounts.
 // If everything is okay, we will create the new user in an unverified state
 // and send the new email address the verification email.
