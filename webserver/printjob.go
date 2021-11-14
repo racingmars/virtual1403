@@ -158,6 +158,7 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 	// Create our virtual printer.
 	job, err := vprinter.New1403(a.font)
 	if err != nil {
+		log.Printf("ERROR: couldn't create virtual printer: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -166,6 +167,8 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 	// virtual printer.
 	jobinfo, err := processPrintDirectives(d, job)
 	if err != nil {
+		log.Printf("INFO:  invalid print directives from %s: %v",
+			user.Email, err)
 		http.Error(w, fmt.Sprintf("Invalid data: %v", err),
 			http.StatusBadRequest)
 	}
@@ -174,6 +177,7 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 	var pdfBuffer bytes.Buffer
 	var pagecount int
 	if pagecount, err = job.EndJob(&pdfBuffer); err != nil {
+		log.Printf("ERROR: couldn't create PDF: %v", err)
 		http.Error(w, fmt.Sprintf("error creating PDF: %v", err),
 			http.StatusInternalServerError)
 		return
@@ -197,6 +201,7 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 			"Slanted Hall, used under license.\r\n",
 		attachmentName, pdfBuffer.Bytes())
 	if err != nil {
+		log.Printf("ERROR: error sending email: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

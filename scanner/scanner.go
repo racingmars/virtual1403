@@ -116,7 +116,8 @@ func (s *scanner) emitLine(linefeed bool) {
 
 	// We need to build a valid UTF-8 string. For now we'll handle a couple
 	// mainframe-specific characters we might see, but someday probably need
-	// to make a general Hercules-default-to-UTF-8 table.
+	// to make a general Hercules-default-to-UTF-8 table. See:
+	// https://github.com/SDL-Hercules-390/hyperion/blob/master/codepage.c#L99
 	utf8runes := make([]rune, 0, len(s.curline))
 	for i := 0; i < s.pos; i++ {
 		var r rune
@@ -125,12 +126,16 @@ func (s *scanner) emitLine(linefeed bool) {
 			r = '¬'
 		case 0xd6:
 			r = '¢'
+		case 0xd7:
+			r = '|'
+		case 0x9b:
+			r = '^'
 		case 0x9f:
 			r = '©'
 		default:
 			if s.curline[i] > 0x7F {
 				log.Printf(
-					"DEBUG: got character %02x, need to add mapping\n",
+					"WARN:  got character %02x, need to add mapping\n",
 					s.curline[i])
 			}
 			r = rune(s.curline[i])

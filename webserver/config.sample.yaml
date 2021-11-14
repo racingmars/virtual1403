@@ -20,7 +20,7 @@ create_admin: admin@example.com
 
 # server_base_url is the base URL for this server, without any trailing slashes
 # e.g.: https://my.server.com
-server_base_url: https://localhost:4444/
+server_base_url: https://localhost:8443/
 
 mail_config:
   from_address: virtual.1403@example.com
