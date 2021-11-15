@@ -96,7 +96,11 @@ func (db *boltimpl) Close() error {
 // access key each time, even if it hasn't changed. This is simpler logic and
 // user record updates aren't frequent enough that we need to optimize this.
 func (db *boltimpl) SaveUser(user model.User) error {
-	// Prepare the user for saving in DB by converting to JSON.
+	// Prepare the user for saving in DB by converting to JSON. If the
+	// creation date isn't already set, set it to now.
+	if user.SignupDate == (time.Time{}) {
+		user.SignupDate = time.Now().UTC()
+	}
 	userjson, err := json.Marshal(&user)
 	if err != nil {
 		return err

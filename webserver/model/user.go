@@ -39,6 +39,7 @@ type User struct {
 	PageCount             int
 	LastJob               time.Time
 	LastVerificationEmail time.Time
+	SignupDate            time.Time
 }
 
 // NewUser is a convenience function to create a new user with the
@@ -48,6 +49,7 @@ func NewUser(email, password string) User {
 	u.Email = email
 	u.Enabled = true
 	u.SetPassword(password)
+	u.SignupDate = time.Now().UTC()
 	u.GenerateAccessKey()
 	return u
 }

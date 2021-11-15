@@ -337,16 +337,17 @@ func (app *application) adminEditUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responseValues := map[string]interface{}{
-		"isAdmin":   u.Admin, // logged-in user, not target user
-		"verified":  user.Verified,
-		"name":      user.FullName,
-		"email":     user.Email,
-		"admin":     user.Admin,
-		"active":    user.Enabled,
-		"unlimited": user.Unlimited,
-		"pageCount": user.PageCount,
-		"jobCount":  user.JobCount,
-		"joblog":    joblog,
+		"isAdmin":    u.Admin, // logged-in user, not target user
+		"verified":   user.Verified,
+		"name":       user.FullName,
+		"email":      user.Email,
+		"admin":      user.Admin,
+		"active":     user.Enabled,
+		"unlimited":  user.Unlimited,
+		"pageCount":  user.PageCount,
+		"jobCount":   user.JobCount,
+		"joblog":     joblog,
+		"signupDate": user.SignupDate,
 	}
 
 	log.Printf("INFO  %s accessed user %s", u.Email, user.Email)
