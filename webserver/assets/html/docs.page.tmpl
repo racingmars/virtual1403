@@ -17,13 +17,13 @@
     <li>Obtain the virtual1403 agent binary for your environment (Linux, macOS, or Windows). Or compile from source.</li>
     <li>Obtain the ready-made config.yaml file with your personal API key from your user page on this website.</li>
     <li>Put the config.yaml with your personal - and secret - API key in the directory of the virtual1403 agent binary.</li>
-    <li>Inside the Hercules (or Hyperion) emulator turn your 1403 printer into a socket printer (see below).</li>
+    <li>Inside  Hercules (or Hyperion)  turn your 1403 printer into a socket printer (see screen shot below).</li>
     <li>Start the virtual1403 agent and check if it connected to Hercules.</li>
     <li>If needed, (re)start the printer in JES with <code>$SPRT1</code>.</li>
     <li>Submit your jobs with <code>MSGCLASS=A</code> and check your inbox for the listing.</li>
 </ol>
 
-<h2>Configuring TK4- MVS 3.8j</h2>
+<h2>Configuring TK4- MVS 3.8</h2>
 
 <h3>On the Hercules/Hyperion console</h3>
 
@@ -33,13 +33,13 @@
 
 <h3>In your operating system shell</h3>
 
-<p>Now start virtual1403 and let it connect to the 1403 socket interface you just activated on Hercules.</p>
+<p>Start virtual1403 and let it connect to the 1403 socket interface you just activated on Hercules.</p>
 <p><img src="/static/setup-shell-command.jpg" width="636" height="246" alt="Command window showing virtual1403 agent starting"></p>
 
 <h3>You may need to restart your JES2 printer</h3>
 
 <p>Start the printer in JES with the command <code>$SPRT1</code> on the MVS console.</p>
-<p>Some (later) version of MVS may require you to enter this command twice.</p>
+<p>Some (later) version of MVS may require you to enter this command twice (to confirm the printer form.)</p>
 <p>NEED IMAGE HERE: <!-- <img src="jes2_restartprinter.jpg"> --></p>
 
 <h3>Now you can submit jobs for printing and have them emailed to you</h3>
@@ -53,6 +53,21 @@
 <p><strong>We don't want that because you will get all those jobs emailed to you!</strong> Let's disable it with the MVS console command <code>P MF1</code></p>
 <p><img src="/static/setup-disable-mf1.jpg" width="636" height="28" alt="Hercules console showing the command '/P MF1' entered"></p>
 
+<h2>Configuring VM/370</h2>
+<p>Getting your VM/370 listings emailed to you is very easy! Here are the steps:</p>
+
+<ol>
+    <li>Obtain the virtual1403 agent binary for your environment (Linux, macOS, or Windows). Or compile from source.</li>
+    <li>Obtain the ready-made config.yaml file with your personal API key from your user page on this website.</li>
+    <li>Put the config.yaml with your personal - and secret - API key in the directory of the virtual1403 agent binary.</li>
+    <li>Inside  Hercules (or Hyperion)  turn your 1403 printer into a socket printer (see screen shot above).</li>
+    <li>Start the virtual1403 agent and check if it connected to Hercules.</li>
+    <li>Start the line printer in your VM/370 Operator console with <code>START ALL</code>.</li>
+    <li>AS A CMS user print your filew with:  <code>spool print system</code> and then print to VIRTUAL1403 with: <code>print hello listing a</code></li>
+</ol>
+
+<h2>Other operating systems</h2>
+<p>Other versions of mainframe operating systems work much the same way. VSE should work out of the box, as well as MTS and MUSIC/SP. We have also tried later version of MVS and VM. They all just work</p>
 <h2>User Limits</h2>
 
 <p>{{.quotaString}} Once you go over your quota a warning will show up on your user page.</p>
