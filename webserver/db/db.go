@@ -46,8 +46,10 @@ type DB interface {
 	// GetUsers returns all users in the database.
 	GetUsers() ([]model.User, error)
 
-	// DeleteUser deletes the user with  the provided email address.
-	DeleteUser(email string) error
+	// DeleteUser deletes the user with  the provided email address. who is
+	// recorded in the deletion log as the person/system that performed the
+	// deletion.
+	DeleteUser(email, who string) error
 
 	// LogJob will record that a job was just processed for the user with the
 	// provided email address. This will add to the job log and update the

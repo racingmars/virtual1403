@@ -43,6 +43,7 @@ const (
 	jobLogUserIndexName        = "job_log_user_index"
 	configBucketName           = "config"
 	autocertBucketName         = "autocert"
+	deleteLogBucketName        = "delete_log"
 	sessionSecretKeyConfigName = "session_secret"
 )
 
@@ -76,6 +77,10 @@ func NewDB(path string) (DB, error) {
 		}
 		if _, err := tx.CreateBucketIfNotExists(
 			[]byte(autocertBucketName)); err != nil {
+			return err
+		}
+		if _, err := tx.CreateBucketIfNotExists(
+			[]byte(deleteLogBucketName)); err != nil {
 			return err
 		}
 		return nil
@@ -199,10 +204,11 @@ func (db *boltimpl) GetUserForAccessKey(key string) (model.User, error) {
 
 // DeleteUser needs to keep user bucket and access key bucket in sync, so
 // will delete from both.
-func (db *boltimpl) DeleteUser(email string) error {
+func (db *boltimpl) DeleteUser(email, who string) error {
 	return db.bdb.Update(func(tx *bolt.Tx) error {
 		userBucket := tx.Bucket([]byte(userBucketName))
 		accessBucket := tx.Bucket([]byte(accessKeyBucketName))
+		deleteLogBucket := tx.Bucket([]byte(deleteLogBucketName))
 
 		olduserjson := userBucket.Get([]byte(strings.ToLower(email)))
 		if olduserjson == nil {
@@ -225,7 +231,7 @@ func (db *boltimpl) DeleteUser(email string) error {
 		logBucket := tx.Bucket([]byte(jobLogBucketName))
 		logIdxBucket := tx.Bucket([]byte(jobLogUserIndexName))
 		c := logIdxBucket.Cursor()
-		// Log log index has keys with user's email, followed by null byte,
+		// Job log index has keys with user's email, followed by null byte,
 		// followed by the key of the job log entry. We want to visit every
 		// key with the user's email address followed by null byte.
 		id := []byte(strings.ToLower(email))
@@ -234,6 +240,29 @@ func (db *boltimpl) DeleteUser(email string) error {
 			entryid := bytes.TrimPrefix(k, id)
 			logBucket.Delete(entryid)
 			c.Delete()
+		}
+
+		// Record the delete action in the deletion log.
+		deleteLogJSON, err := json.Marshal(struct {
+			DeletedUser string
+			Who         string
+			Time        time.Time
+		}{
+			DeletedUser: olduser.Email,
+			Who:         who,
+			Time:        time.Now().UTC(),
+		})
+		if err != nil {
+			return err
+		}
+		nextID, err := deleteLogBucket.NextSequence()
+		if err != nil {
+			return err
+		}
+		logID := make([]byte, 64/8) // 64-bit uint
+		binary.PutUvarint(logID, nextID)
+		if err := deleteLogBucket.Put(logID, deleteLogJSON); err != nil {
+			return err
 		}
 
 		return nil

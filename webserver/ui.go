@@ -481,7 +481,7 @@ func (app *application) adminDeleteUser(w http.ResponseWriter,
 		return
 	}
 
-	if err := app.db.DeleteUser(userToDelete.Email); err != nil {
+	if err := app.db.DeleteUser(userToDelete.Email, u.Email); err != nil {
 		app.serverError(w, err.Error())
 		return
 	}
