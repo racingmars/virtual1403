@@ -27,6 +27,10 @@ func main() {
 	printer.AddLine("//////", true)
 	printer.AddLine("", true)
 	printer.AddLine("FORM FEED FOLLOWS THIS LINE", true)
+	printer.AddLine("", true)
+	printer.AddLine("THE FOLLOWING LINE MAKES BOLD TEXT BY OVERSTRIKING THE LINE WITH THE SAME TEXT:", true)
+	printer.AddLine("THIS IS BOLD TEXT AND THIS IS REGULAR TEXT.", false)
+	printer.AddLine("THIS IS BOLD TEXT", true)
 
 	printer.NewPage()
 

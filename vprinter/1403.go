@@ -50,12 +50,13 @@ const (
 
 // our implementation of the Job interface simulating an IBM 1403 printer.
 type virtual1403 struct {
-	pdf        *gofpdf.Fpdf
-	font       []byte
-	curLine    int
-	pages      int
-	leftMargin float64
-	background gofpdf.Template
+	pdf              *gofpdf.Fpdf
+	font             []byte
+	curLine          int
+	pages            int
+	leftMargin       float64
+	overstrikeOffset float64
+	background       gofpdf.Template
 }
 
 // Page size
@@ -112,10 +113,14 @@ func (job *virtual1403) AddLine(s string, linefeed bool) int {
 	}
 	// 1403 only had capital letters
 	s = strings.ToUpper(s)
-	job.pdf.SetXY(job.leftMargin, float64(job.curLine*12)+.25)
+	job.pdf.SetXY(job.leftMargin+job.overstrikeOffset,
+		float64(job.curLine*12)+.25)
 	job.pdf.CellFormat(0, 12, s, "", 0, "LM", false, 0, "")
 	if linefeed {
 		job.curLine++
+		job.overstrikeOffset = 0
+	} else {
+		job.overstrikeOffset = .35
 	}
 	return job.pages
 }
