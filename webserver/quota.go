@@ -110,7 +110,13 @@ func (app *application) quotaString() string {
 		periodUnit = "hour"
 	}
 
+	deletePeriod := ""
+	if app.inactiveMonthsCleanup > 0 {
+		deletePeriod = fmt.Sprintf(" Accounts without a print job in the "+
+			"previous %d months will be deleted.", app.inactiveMonthsCleanup)
+	}
+
 	return fmt.Sprintf(
-		"Users are allowed %s jobs and %s pages during the previous %d %s.",
-		jobsQuota, pagesQuota, period, periodUnit)
+		"Users are allowed %s jobs and %s pages during the previous %d %s.%s",
+		jobsQuota, pagesQuota, period, periodUnit, deletePeriod)
 }

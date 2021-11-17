@@ -20,6 +20,7 @@ package db
 
 import (
 	"errors"
+	"time"
 
 	"github.com/racingmars/virtual1403/webserver/model"
 	"golang.org/x/crypto/acme/autocert"
@@ -50,6 +51,14 @@ type DB interface {
 	// recorded in the deletion log as the person/system that performed the
 	// deletion.
 	DeleteUser(email, who string) error
+
+	// DeleteInactiveUsers deletes users based on inactivity. The function
+	// takes two times: the oldest allowed inactive time (time since last
+	// print job) for verified accounts, and oldest allowed creation time for
+	// new accounts that are still unverified. For verified accounts with no
+	// print jobs, the inactive time is based on sign-up time. Returns the
+	// number of users deleted (which may still be >0 when err != nil).
+	DeleteInactiveUsers(inactive, unverified time.Time) (int, error)
 
 	// LogJob will record that a job was just processed for the user with the
 	// provided email address. This will add to the job log and update the

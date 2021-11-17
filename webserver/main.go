@@ -41,17 +41,18 @@ import (
 )
 
 type application struct {
-	font           []byte
-	db             db.DB
-	mailconfig     mailer.Config
-	serverBaseURL  string
-	session        *sessions.Session
-	templateCache  map[string]*template.Template
-	quotaJobs      int
-	quotaPages     int
-	quotaPeriod    time.Duration
-	maxLinesPerJob int
-	printerSeats   chan bool
+	font                  []byte
+	db                    db.DB
+	mailconfig            mailer.Config
+	serverBaseURL         string
+	session               *sessions.Session
+	templateCache         map[string]*template.Template
+	quotaJobs             int
+	quotaPages            int
+	quotaPeriod           time.Duration
+	maxLinesPerJob        int
+	printerSeats          chan bool
+	inactiveMonthsCleanup int
 }
 
 //go:embed IBMPlexMono-Regular.ttf
@@ -188,6 +189,23 @@ func main() {
 	// The print API -- not part of the UI
 	mux.Handle("/print", http.HandlerFunc(app.printjob))
 
+	// If configured, run the database cleanup to delete inactive users every
+	// 24 hours. We'll wait until 24 hours passes to run it for the first time
+	// after server startup.
+	if config.InactiveMonthsCleanup > 0 && config.UnverifiedMonthsCleanup > 0 {
+		app.inactiveMonthsCleanup = config.InactiveMonthsCleanup
+		log.Printf("INFO:  Starting background inactive user delete task")
+		go func() {
+			for {
+				time.Sleep(24 * time.Hour)
+				app.dbCleanupTask(config.UnverifiedMonthsCleanup,
+					config.InactiveMonthsCleanup)
+			}
+		}()
+	} else {
+		log.Printf("INFO:  Inactive user deletion is not configured")
+	}
+
 	// If running plain HTTP service, we're ready to go
 	if config.TLSListenPort <= 0 {
 		log.Printf("INFO:  Starting plain HTTP server on :%d",
@@ -239,4 +257,21 @@ func generateRedirectHandler(port int) func(http.ResponseWriter,
 
 func serveFavicon(w http.ResponseWriter, r *http.Request) {
 	w.Write(favicon)
+}
+
+// this function should typically be called from a timer / sleep loop in a
+// goroutine to run occasionally.
+func (app *application) dbCleanupTask(unverifiedMonths, inactiveMonths int) {
+	now := time.Now()
+	unverifiedCutoff := now.AddDate(0, -unverifiedMonths, 0)
+	inactiveCutoff := now.AddDate(0, -inactiveMonths, 0)
+	log.Printf("INFO:  deleting unverified users with cutoff date %s",
+		unverifiedCutoff.UTC().Format(time.RFC822))
+	log.Printf("INFO:  deleting inactive users with cutoff date %s",
+		inactiveCutoff.UTC().Format(time.RFC822))
+	n, err := app.db.DeleteInactiveUsers(inactiveCutoff, unverifiedCutoff)
+	log.Printf("INFO:  deleted %d users during database cleanup", n)
+	if err != nil {
+		log.Printf("ERROR: db error during database cleanup: %v", err)
+	}
 }

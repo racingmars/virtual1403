@@ -24,6 +24,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -267,6 +268,70 @@ func (db *boltimpl) DeleteUser(email, who string) error {
 
 		return nil
 	})
+}
+
+func (db *boltimpl) DeleteInactiveUsers(inactive,
+	unverified time.Time) (n int, err error) {
+
+	// accumulate list of email addresses to delete
+	var usersToDelete []string
+	if err := db.bdb.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(userBucketName))
+		err := b.ForEach(func(k, v []byte) error {
+			var user model.User
+			if err := json.Unmarshal(v, &user); err != nil {
+				return err
+			}
+
+			// Admins and unlimited users are immune from auto-deletion.
+			if user.Admin || user.Unlimited {
+				return nil // move on to next user in ForEach iteration
+			}
+
+			// If user is unverified, apply the unverified cut-off date.
+			if !user.Verified {
+				if user.SignupDate.Before(unverified) {
+					usersToDelete = append(usersToDelete, user.Email)
+				}
+				return nil // move on to next user in ForEach iteration
+			}
+
+			// For verified users who haven't printed yet, use the account
+			// creation date instead of the last job date.
+			if user.LastJob == (time.Time{}) {
+				if user.SignupDate.Before(inactive) {
+					usersToDelete = append(usersToDelete, user.Email)
+				}
+				return nil // move on to next user in ForEach iteration
+			}
+
+			// This is a verified user who has printed at least one job.
+			if user.LastJob.Before(inactive) {
+				usersToDelete = append(usersToDelete, user.Email)
+			}
+
+			return nil // move on to next user in ForEach iteration
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return 0, err
+	}
+
+	// Now delete each user. Note we must do this outside of the above
+	// transaction or we would deadlock with the transaction in the DeleteUser
+	// function.
+	for i, email := range usersToDelete {
+		log.Printf("INFO:  auto-deleting user %s", email)
+		if err := db.DeleteUser(email, "db cleanup"); err != nil {
+			return i, err
+		}
+	}
+
+	return len(usersToDelete), nil
 }
 
 func (db *boltimpl) LogJob(email, jobinfo string, pages int) error {

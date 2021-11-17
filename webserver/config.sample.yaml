@@ -44,6 +44,20 @@ concurrent_print_jobs: 0
 # blow their entire pages quota on a single job.
 max_lines_per_job: 31000
 
+# The server can automatically delete inactive or unverified users.
+#
+# If both inactive_months_cleanup and unverified_months_cleanup are not set or
+# <= 0, no auto cleanup will occur. If one is set to > 0, both must be set >
+# 0.
+#
+# inactive_months_cleanup is the number of months after which inactive users
+# will be deleted.
+inactive_months_cleanup: 6
+# unverified_months_cleanup is the number of months after which unverified
+# accounts will be deleted.
+unverified_months_cleanup: 1
+
+
 # SMTP server configuration. plaintext and STARTTLS services are supported. If
 # authentication isn't required, remove username and password fields.
 mail_config:
