@@ -1,0 +1,73 @@
+Virtual 1403
+============
+
+https://github.com/racingmars/virtual1403
+
+This is the Virtual 1403 Agent, which connects to Hercules to receive print
+jobs from mainframe operating systems and either generates PDFs in a local
+output directory, or sends the print jobs to an online service to email you
+PDFs.
+
+To use Virtual 1403, edit the config.yaml file to point to your Hercules
+sockdev printer and configure choose local or online mode. If using online
+mode, create and log in to your account to retrieve the correct configuration
+settings for your account.
+
+After your configuration file is correct, simply run the virtual1403
+executable and print to the sockdev printer device from your mainframe.
+
+For more information about configuring, see
+https://1403.bitnet.systems/docs/setup
+
+Acknowledgements
+----------------
+
+virtual1403 is developed in collaboration with Moshix
+(https://github.com/moshix/), and the greenbar paper design is based on photos
+he provided of real 1403 printouts he has.
+
+Font conversion notes
+---------------------
+
+If you receive error messages when trying to load your custom font, you can
+try to convert it to a format supported by the PDF library using FontForge. If
+you are a Linux or Mac user, ensure the fontforge command is available on your
+system, and create the following script
+(<http://www.stuermer.ch/blog/convert-otf-to-ttf-font-on-ubuntu.html>):
+
+
+    #!/usr/bin/fontforge
+    # Quick and dirty hack: converts a font to truetype (.ttf)
+    Print("Opening "+$1);
+    Open($1);
+    Print("Saving "+$1:r+".out.ttf");
+    Generate($1:r+".out.ttf");
+    Quit(0);
+
+Make the script executable (chmod +x convertfont.sh), and run it on the font
+file (./convertfont.sh my-font-file.otf) to create a TrueType version that
+should work.
+
+License
+-------
+
+    Copyright 2021 Matthew R. Wilson <mwilson@mattwilson.org>
+
+    This file is part of virtual1403
+    <https://github.com/racingmars/virtual1403>.
+
+    virtual1403 is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    virtual1403 is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with virtual1403. If not, see <https://www.gnu.org/licenses/>.
+
+The source code for virtual1403 is available at:
+https://github.com/racingmars/virtual1403

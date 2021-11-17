@@ -40,6 +40,9 @@ import (
 //go:embed IBMPlexMono-Regular.ttf
 var defaultFont []byte
 
+// version can be set at build time
+var version string = "unknown"
+
 type configuration struct {
 	HerculesAddress string `yaml:"hercules_address"`
 	Mode            string `yaml:"mode"`
@@ -52,7 +55,14 @@ type configuration struct {
 var trace = flag.Bool("trace", false, "enable trace logging")
 
 func main() {
+	displayVersion := flag.Bool("version", false,
+		"display version and quit")
 	flag.Parse()
+
+	if *displayVersion {
+		fmt.Printf("Version %s\n", version)
+		return
+	}
 
 	var handler scanner.PrinterHandler
 	startupMessage()
@@ -243,4 +253,5 @@ func startupMessage() {
 	fmt.Fprintln(os.Stderr, "virtual1403 is free software, distrubuted under the GPL v3")
 	fmt.Fprintln(os.Stderr, "  (or later) license; see COPYING for details.")
 	fmt.Fprintln(os.Stderr)
+	fmt.Fprintf(os.Stderr, "Version %s\n\n", version)
 }
