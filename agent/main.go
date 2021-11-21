@@ -250,7 +250,7 @@ func startupMessage() {
 	fmt.Fprintln(os.Stderr, "virtual1403 <https://github.com/racingmars/virtual1403/>")
 	fmt.Fprintln(os.Stderr, "  copyright 2021 Matthew R. Wilson.")
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, "virtual1403 is free software, distrubuted under the GPL v3")
+	fmt.Fprintln(os.Stderr, "virtual1403 is free software, distributed under the GPL v3")
 	fmt.Fprintln(os.Stderr, "  (or later) license; see COPYING for details.")
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintf(os.Stderr, "Version %s\n\n", version)
