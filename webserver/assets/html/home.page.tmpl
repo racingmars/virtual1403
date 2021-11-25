@@ -5,22 +5,18 @@
 {{define "main"}}
 <div class="columns">
     <div class="column">
-        <section class="hero">
-            <div class="hero-body">
-                <p class="title">Sign in...</p>
-            </div>
-        </section>
+        <h1 class="title block">Sign in...</h1>
         {{with .verifySuccess}}
-            <div class="notification is-success">
+            <div class="notification is-success block">
                 {{.}} You may now log in and begin using the service.
             </div>
         {{end}}
         {{with .loginError}}
-            <div class="notification is-danger">
+            <div class="notification is-danger block">
                 {{.}}
             </div>
         {{end}}
-        <form method="post" action="login">
+        <form method="post" action="login" class="block">
             <div class="field is-horizontal">
                 <div class="field-label is-normal">
                     <label class="label" for="login-email">Email</label>
@@ -60,21 +56,21 @@
                 </div>
             </div>
         </form>
+
+        <h2 class="title block">Documentation</h2>
+        <p class="block"><a href="docs/setup">Setup instructions</a></p>
+        <p class="block"><a href="static/virtual1403-sample.pdf">Sample PDF</a></p>
     </div>
 
     <div class="column">
-        <section class="hero">
-            <div class="hero-body">
-                <p class="title">...or sign up</p>
-            </div>
-        </section>
+        <h1 class="title block">...or sign up</h1>
 
         {{with .signupError}}
-            <div class="notification is-danger">
+            <div class="notification is-danger block">
                 {{.}}
             </div>
         {{end}}
-        <form method="post" action="signup">
+        <form method="post" action="signup" class="block">
             <div class="field is-horizontal">
                 <div class="field-label is-normal">
                     <label class="label" for="signup-email">Email</label>
