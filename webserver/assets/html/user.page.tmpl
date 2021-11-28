@@ -40,6 +40,29 @@
 </div>
 {{ end }}
 
+{{ if and (.verified) (eq .jobCount 0) }}
+<div class="columns">
+    <div class="column is-three-fifths is-offset-one-fifth">
+        <div class="message is-success">
+            <div class="message-header">Getting Started</div>
+            <div class="message-body">
+                <p>Ready to print your first job?</p>
+                <ul>
+                    <li>Download an agent for
+                        <strong><a href="https://github.com/racingmars/virtual1403/releases/download/v0.1.0/virtual1403-agent-v0.1.0_windows-amd64.zip">Windows</a></strong>,
+                        <strong><a href="https://github.com/racingmars/virtual1403/releases/download/v0.1.0/virtual1403-agent-v0.1.0_macos-amd64.zip">Intel Mac</a></strong>,
+                        <strong><a href="https://github.com/racingmars/virtual1403/releases/download/v0.1.0/virtual1403-agent-v0.1.0_macos-aarch64.zip">M1 Mac</a></strong>,
+                        <strong><a href="https://github.com/racingmars/virtual1403/releases/download/v0.1.0/virtual1403-agent-v0.1.0_linux-amd64.tgz">Intel Linux</a></strong>,
+                        or <strong><a href="https://github.com/racingmars/virtual1403/releases/download/v0.1.0/virtual1403-agent-v0.1.0_linux-armv7.tgz">ARM Linux</a></strong>.</li>
+                    <li>Check the <strong><a href="docs/setup">setup tutorial</a></strong> to quickly get started with TK4- or VM/370.</li>
+                    <li>Or see <strong><a href="https://www.youtube.com/watch?v=1_pPkFDdtmU">this YouTube video</a></strong> to learn more.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}
+
 {{ if .verified }}
     <p>Your access key is <code>{{.apiKey}}</code></p>
     <p><form method="post" action="regenkey">
