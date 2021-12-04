@@ -45,6 +45,7 @@ const (
 	configBucketName           = "config"
 	autocertBucketName         = "autocert"
 	deleteLogBucketName        = "delete_log"
+	pdfBucketName              = "pdfs"
 	sessionSecretKeyConfigName = "session_secret"
 )
 
@@ -82,6 +83,10 @@ func NewDB(path string) (DB, error) {
 		}
 		if _, err := tx.CreateBucketIfNotExists(
 			[]byte(deleteLogBucketName)); err != nil {
+			return err
+		}
+		if _, err := tx.CreateBucketIfNotExists(
+			[]byte(pdfBucketName)); err != nil {
 			return err
 		}
 		return nil
@@ -334,11 +339,12 @@ func (db *boltimpl) DeleteInactiveUsers(inactive,
 	return len(usersToDelete), nil
 }
 
-func (db *boltimpl) LogJob(email, jobinfo string, pages int) error {
+func (db *boltimpl) LogJob(email, jobinfo string, pages int, pdf []byte) error {
 	err := db.bdb.Update(func(tx *bolt.Tx) error {
 		userBucket := tx.Bucket([]byte(userBucketName))
 		logBucket := tx.Bucket([]byte(jobLogBucketName))
 		logIdxBucket := tx.Bucket([]byte(jobLogUserIndexName))
+		pdfBucket := tx.Bucket([]byte(pdfBucketName))
 
 		userjson := userBucket.Get([]byte(strings.ToLower(email)))
 		if userjson == nil {
@@ -377,6 +383,11 @@ func (db *boltimpl) LogJob(email, jobinfo string, pages int) error {
 			Time:    user.LastJob,
 			JobInfo: jobinfo,
 		}
+
+		if len(pdf) > 0 {
+			logentry.HasPDF = true
+		}
+
 		logentryjson, err := json.Marshal(&logentry)
 		if err != nil {
 			return err
@@ -398,6 +409,14 @@ func (db *boltimpl) LogJob(email, jobinfo string, pages int) error {
 			return err
 		}
 
+		// Save the PDF
+		if len(pdf) > 0 {
+			err = pdfBucket.Put(logID, pdf)
+			if err != nil {
+				return err
+			}
+		}
+
 		return nil
 	})
 
@@ -406,6 +425,28 @@ func (db *boltimpl) LogJob(email, jobinfo string, pages int) error {
 	}
 
 	return nil
+}
+
+func (db *boltimpl) GetPDF(id uint64) ([]byte, error) {
+	var pdf []byte
+	err := db.bdb.View(func(tx *bolt.Tx) error {
+		pdfBucket := tx.Bucket([]byte(pdfBucketName))
+
+		logID := make([]byte, 64/8) // 64-bit uint
+		binary.PutUvarint(logID, id)
+
+		pdf = pdfBucket.Get(logID)
+		if len(pdf) == 0 {
+			return ErrNotFound
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return pdf, nil
 }
 
 func (db *boltimpl) GetUserJobLog(email string, size int) (
@@ -500,6 +541,33 @@ func (db *boltimpl) GetJobLog(size int) ([]model.JobLogEntry, error) {
 	return results, nil
 }
 
+func (db *boltimpl) GetJob(id uint64) (model.JobLogEntry, error) {
+	var job model.JobLogEntry
+	err := db.bdb.View(func(tx *bolt.Tx) error {
+		logBucket := tx.Bucket([]byte(jobLogBucketName))
+
+		logID := make([]byte, 64/8) // 64-bit uint
+		binary.PutUvarint(logID, id)
+
+		jobLogJSON := logBucket.Get(logID)
+		if len(jobLogJSON) == 0 {
+			return ErrNotFound
+		}
+
+		if err := json.Unmarshal(jobLogJSON, &job); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return model.JobLogEntry{}, err
+	}
+
+	return job, nil
+}
+
 func (db *boltimpl) GetSessionSecret() ([]byte, error) {
 	result := make([]byte, SessionSecretKeyLength)
 	err := db.bdb.Update(func(tx *bolt.Tx) error {
@@ -531,4 +599,57 @@ func (db *boltimpl) GetSessionSecret() ([]byte, error) {
 		return nil, err
 	}
 	return result, nil
+}
+
+func (db *boltimpl) CleanPDFs(cutoff time.Time) {
+	n := 0 // count of PDFs we delete
+	err := db.bdb.Update(func(tx *bolt.Tx) error {
+		pdfBucket := tx.Bucket([]byte(pdfBucketName))
+		jobBucket := tx.Bucket([]byte(jobLogBucketName))
+
+		// Go over each PDF. We can't use bucket.ForEach() here because we are
+		// not allowed to modify the bucket when doing so. Since we may delete
+		// some items from the bucket, we'll use a cursor.
+		c := pdfBucket.Cursor()
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			jobJSON := jobBucket.Get(k)
+			if len(jobJSON) == 0 {
+				// Job is gone. Perhaps user was deleted. We'll delete the PDF
+				c.Delete()
+				n++
+				continue
+			}
+
+			var job model.JobLogEntry
+			if err := json.Unmarshal(jobJSON, &job); err != nil {
+				log.Printf("ERROR: during PDF cleanup, couldn't read "+
+					"job JSON for %v: %v", k, err)
+				continue
+			}
+
+			// Should we delete?
+			if job.Time.Before(cutoff) {
+				job.HasPDF = false
+				jobJSON, err := json.Marshal(&job)
+				if err != nil {
+					log.Printf("ERROR: during PDF cleanup, couldn't "+
+						"re-encode JSON for %v: %v", k, err)
+					continue
+				}
+				if err := jobBucket.Put(k, jobJSON); err != nil {
+					log.Printf("ERROR: during PDF cleanup, couldn't "+
+						"save JSON for %v: %v", k, err)
+					continue
+				}
+				c.Delete()
+				n++
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		log.Printf("ERROR: during PDF cleanup, transaction returned: %v", err)
+	} else {
+		log.Printf("INFO:  PDF cleanup deleted %d PDFs", n)
+	}
 }

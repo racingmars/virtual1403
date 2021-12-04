@@ -64,7 +64,7 @@ type DB interface {
 	// provided email address. This will add to the job log and update the
 	// user's record with the last job time and increase the job count for the
 	// user.
-	LogJob(email, jobinfo string, pages int) error
+	LogJob(email, jobinfo string, pages int, pdf []byte) error
 
 	// GetUserJobLog returns up to size rows from the job log for the user
 	// with the provided email address. Jobs are returned in descending order
@@ -74,6 +74,15 @@ type DB interface {
 	// GetJobLog returns up to size rows from the job log in descending order
 	// of time.
 	GetJobLog(size int) ([]model.JobLogEntry, error)
+
+	// GetJob returns the details of one job.
+	GetJob(id uint64) (model.JobLogEntry, error)
+
+	// GetPDF will get the PDF file for the give job ID.
+	GetPDF(job uint64) ([]byte, error)
+
+	// CleanPDFs will delete the stored PDFs from before the provided date.
+	CleanPDFs(cutoff time.Time)
 
 	// GetSessionSecret will return a 32-byte random value to use as the
 	// session secret key. If none exists in the database, this function will

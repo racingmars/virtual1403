@@ -245,7 +245,8 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 	log.Printf("INFO:  sent %d pages to %s", pagecount, user.Email)
 
 	// Try to log the job to the database
-	if err = a.db.LogJob(user.Email, jobinfo, pagecount); err != nil {
+	if err = a.db.LogJob(user.Email, jobinfo, pagecount,
+		pdfBuffer.Bytes()); err != nil {
 		log.Printf("ERROR: couldn't log job: %v", err)
 	}
 

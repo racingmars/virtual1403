@@ -28,6 +28,9 @@ quota_jobs: 25
 quota_pages: 1000
 quota_period: 24 # hours
 
+# How many days to keep job PDFs in the database?
+pdf_cleanup_days: 7
+
 # Concurrent print jobs will limit the number of simultaneous threads running
 # the print API call. The default, 0, will allow unlimited concurrency. A
 # higher value will make incoming API requests to the print API block (wait)

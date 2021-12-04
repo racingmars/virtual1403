@@ -1,0 +1,37 @@
+{{template "base" .}}
+
+{{define "title"}}Your Jobs{{end}}
+
+{{define "main"}}
+
+<div class="content">
+
+{{ if .isAdmin }}
+    {{ template "adminlinks" . }}
+{{ end }}
+
+<p class="block"><a href="user">🏠 Home</a></p>
+
+{{ with .joblog }}
+<table class="table">
+    <thead>
+        <tr><th>PDF</th><th>Time <span class="is-size-7">(UTC)</span></th><th>Name</th><th>Pages</th></tr>
+    </thead>
+    <tbody>
+        {{range .}}
+            <tr>
+                <td>{{ if .HasPDF }}
+                    <a href="pdf?id={{ .ID }}"><img src="/static/pdf.png" alt="PDF" width="33" height="24"></a>
+                {{ end }}</td>
+                <td>{{.Time.Format "2006-01-02 15:04:05"}}</td>
+                <td>{{ .JobInfo }}</td>
+                <td>{{ .Pages }}</td>
+            </tr>
+        {{ end }}
+    </tbody>
+</table>
+{{ else }}
+<p class="block">No jobs found</p>
+{{ end }}
+
+{{end}}

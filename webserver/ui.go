@@ -19,10 +19,12 @@ package main
 // along with virtual1403. If not, see <https://www.gnu.org/licenses/>.
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -171,6 +173,7 @@ func (app *application) userInfo(w http.ResponseWriter, r *http.Request) {
 		"quotaViolation":      quotaErr,
 		"chargedPages":        pageCount,
 		"chargedJobs":         jobCount,
+		"pdfRetention":        app.pdfCleanupDays,
 	}
 
 	if responseValues["passwordError"] != nil {
@@ -190,6 +193,33 @@ func (app *application) userInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	app.render(w, r, "user.page.tmpl", responseValues)
+}
+
+// User job log to access more PDFs than the list on the user home page
+func (app *application) userJobs(w http.ResponseWriter, r *http.Request) {
+	// Verify we have a logged in, valid user
+	u := app.checkLoggedInUser(r)
+	if u == nil {
+		// No logged in user
+		app.session.Destroy(r)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Get 100 most recent jobs the user printed
+	joblog, err := app.db.GetUserJobLog(u.Email, 100)
+	if err != nil {
+		log.Printf("ERROR: db error getting user joblog for %s: %v",
+			u.Email, err)
+		// We'll allow the page to render, it'll just have an empty job log
+	}
+
+	responseValues := map[string]interface{}{
+		"isAdmin": u.Admin,
+		"joblog":  joblog,
+	}
+
+	app.render(w, r, "userjoblist.page.tmpl", responseValues)
 }
 
 // POST hander to regenerate a user's access key
@@ -766,4 +796,66 @@ func (app *application) checkLoggedInUser(r *http.Request) *model.User {
 
 	// At this point, we have a valid, active logged-in user.
 	return &user
+}
+
+func (app *application) pdf(w http.ResponseWriter, r *http.Request) {
+	// Verify we have a logged in, valid user
+	u := app.checkLoggedInUser(r)
+	if u == nil {
+		// No logged in user
+		app.session.Destroy(r)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		http.Error(w, "id query parameter must be present",
+			http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "id query parameter must be a non-negative integer",
+			http.StatusBadRequest)
+		return
+	}
+
+	job, err := app.db.GetJob(id)
+	if err == db.ErrNotFound {
+		http.Error(w, "job not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		app.serverError(w, "db error getting job for PDF retrieval: "+
+			err.Error())
+		return
+	}
+
+	if !strings.EqualFold(u.Email, job.Email) {
+		log.Printf("INFO:  User %s tried to retrieve PDF for job %d, "+
+			"which belongs to %s", u.Email, id, job.Email)
+		http.Error(w, "not authorized for that job", http.StatusForbidden)
+		return
+	}
+
+	pdf, err := app.db.GetPDF(id)
+	if err == db.ErrNotFound {
+		http.Error(w, "PDF for job no longer available", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		app.serverError(w, "db error retrieving PDF: "+err.Error())
+		return
+	}
+
+	log.Printf("INFO:  User %s retrieved PDF for job %d", u.Email, id)
+
+	w.Header().Add("Content-Type", "application/pdf")
+	w.Header().Add("Content-Disposition",
+		fmt.Sprintf("attachment; filename=\"virtual1403-job-%d.pdf\"", id))
+	w.Header().Add("Content-Length", strconv.Itoa(len(pdf)))
+	w.WriteHeader(http.StatusOK)
+	w.Write(pdf)
 }

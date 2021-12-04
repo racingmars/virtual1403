@@ -53,6 +53,7 @@ type application struct {
 	maxLinesPerJob        int
 	printerSeats          chan bool
 	inactiveMonthsCleanup int
+	pdfCleanupDays        int
 }
 
 //go:embed IBMPlexMono-Regular.ttf
@@ -115,6 +116,9 @@ func main() {
 	app.quotaPeriod = time.Duration(config.QuotaPeriod) * time.Hour
 	log.Printf("INFO:  quota period is %s", app.quotaPeriod.String())
 
+	app.pdfCleanupDays = config.PDFDaysCleanup
+	log.Printf("INFO:  PDFs will be deleted after %d days", app.pdfCleanupDays)
+
 	// If there is a limit on concurrent print job, set up the available user
 	// seats
 	if config.ConcurrentPrintJobs > 0 {
@@ -169,10 +173,12 @@ func main() {
 		app.changePassword)))
 	mux.Handle("/logout", app.session.Enable(http.HandlerFunc(app.logout)))
 	mux.Handle("/user", app.session.Enable(http.HandlerFunc(app.userInfo)))
+	mux.Handle("/userjobs", app.session.Enable(http.HandlerFunc(app.userJobs)))
 	mux.Handle("/regenkey", app.session.Enable(http.HandlerFunc(app.regenkey)))
 	mux.Handle("/resend", app.session.Enable(http.HandlerFunc(
 		app.resendVerification)))
 	mux.Handle("/verify", app.session.Enable(http.HandlerFunc(app.verifyUser)))
+	mux.Handle("/pdf", app.session.Enable(http.HandlerFunc(app.pdf)))
 
 	// Admin pages
 	mux.Handle("/admin/users", app.session.Enable(http.HandlerFunc(
@@ -205,6 +211,19 @@ func main() {
 	} else {
 		log.Printf("INFO:  Inactive user deletion is not configured")
 	}
+
+	// Run a background job every hour to clean up expired PDFs
+	log.Printf("INFO:  Starting background expired PDF delete task")
+	go func() {
+		for {
+			cutoff := time.Now().Add(
+				-time.Duration(app.pdfCleanupDays) * time.Hour * 24)
+			log.Printf("INFO:  Deleting PDFs older than %s",
+				cutoff.UTC().String())
+			app.db.CleanPDFs(cutoff)
+			time.Sleep(1 * time.Hour)
+		}
+	}()
 
 	// If running plain HTTP service, we're ready to go
 	if config.TLSListenPort <= 0 {

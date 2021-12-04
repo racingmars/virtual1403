@@ -47,6 +47,7 @@ type ServerConfig struct {
 	ConcurrentPrintJobs     int           `yaml:"concurrent_print_jobs"`
 	InactiveMonthsCleanup   int           `yaml:"inactive_months_cleanup"`
 	UnverifiedMonthsCleanup int           `yaml:"unverified_months_cleanup"`
+	PDFDaysCleanup          int           `yaml:"pdf_cleanup_days"`
 }
 
 func readConfig(path string) (ServerConfig, []error) {
@@ -115,6 +116,11 @@ func readConfig(path string) (ServerConfig, []error) {
 			"> 0, inactive_months_cleanup must also be > 0"))
 	}
 
+	if c.PDFDaysCleanup < 1 {
+		errs = append(errs, fmt.Errorf(
+			"pdf_days_cleanup is required and must be >0"))
+	}
+
 	return c, errs
 }
 
@@ -122,7 +128,7 @@ func (a *application) createAdmin(email string) error {
 	// Only proceed if admin user doesn't already exist
 	_, err := a.db.GetUser(email)
 	if err != db.ErrNotFound {
-		log.Printf("INFO  admin account %s already exists", email)
+		log.Printf("INFO:  admin account %s already exists", email)
 		return nil
 	}
 
@@ -146,7 +152,7 @@ func (a *application) createAdmin(email string) error {
 		return err
 	}
 
-	log.Printf("INFO  Created new admin account: %s ; %s ; %s", email,
+	log.Printf("INFO:  Created new admin account: %s ; %s ; %s", email,
 		pwstring, u.AccessKey)
 	return nil
 }

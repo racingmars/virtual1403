@@ -26,4 +26,5 @@ type JobLogEntry struct {
 	Time    time.Time
 	Pages   int
 	JobInfo string
+	HasPDF  bool
 }

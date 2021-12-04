@@ -102,19 +102,42 @@ access_key: "{{.apiKey}}"</pre></p>
 {{ end }}
 
 <div class="block columns">
+
 <div class="column">
-<h3 class="subtitle">Change password</h3>
+<p class="is-size-5">Recent print jobs (<a href="userjobs">More...</a>)</p>
+<p>PDFs are kept for {{ .pdfRetention }} days.</p>
+<table class="table">
+    <thead>
+        <tr><th>PDF</th><th>Time <span class="is-size-7">(UTC)</span></th><th>Name</th><th>Pages</th></tr>
+    </thead>
+    <tbody>
+        {{range .joblog}}
+            <tr>
+                <td>{{ if .HasPDF }}
+                    <a href="pdf?id={{ .ID }}"><img src="/static/pdf.png" alt="PDF" width="33" height="24"></a>
+                {{ end }}</td>
+                <td>{{.Time.Format "2006-01-02 15:04:05"}}</td>
+                <td>{{ .JobInfo }}</td>
+                <td>{{ .Pages }}</td>
+            </tr>
+        {{ end }}
+    </tbody>
+</table>
+</div>
+
+<div class="column">
+<p class="is-size-5 block">Change password</p>
 {{with .passwordError}}
-    <div class="notification is-danger">
+    <div class="notification is-danger block">
         {{.}}
     </div>
 {{end}}
 {{with .passwordSuccess}}
-    <div class="notification is-success">
+    <div class="notification is-success block">
         {{.}}
     </div>
 {{end}}
-<form method="post" action="changepassword">
+<form method="post" action="changepassword" class="block">
     <div class="field is-horizontal">
         <div class="field-label is-normal">
             <label class="label" for="login-passwd">Current Password</label>
@@ -169,23 +192,7 @@ access_key: "{{.apiKey}}"</pre></p>
     </div>
 </form>
 </div>
-<div class="column">
-<h3 class="subtitle">Recent print jobs</h2>
-<table class="table">
-    <thead>
-        <tr><th>Time <span class="is-size-7">(UTC)</span></th><th>Name</th><th>Pages</th></tr>
-    </thead>
-    <tbody>
-        {{range .joblog}}
-            <tr>
-                <td>{{.Time.Format "2006-01-02 15:04:05"}}</td>
-                <td>{{ .JobInfo }}</td>
-                <td>{{ .Pages }}</td>
-            </tr>
-        {{ end }}
-    </tbody>
-</table>
-</div>
+
 </div>
 
 <div class="block"><a class="button is-black" href="logout">Logout</a></div>
