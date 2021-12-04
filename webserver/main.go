@@ -179,6 +179,7 @@ func main() {
 		app.resendVerification)))
 	mux.Handle("/verify", app.session.Enable(http.HandlerFunc(app.verifyUser)))
 	mux.Handle("/pdf", app.session.Enable(http.HandlerFunc(app.pdf)))
+	mux.Handle("/changeDelivery", app.session.Enable(http.HandlerFunc(app.changeDelivery)))
 
 	// Admin pages
 	mux.Handle("/admin/users", app.session.Enable(http.HandlerFunc(

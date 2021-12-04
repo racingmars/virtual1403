@@ -226,23 +226,27 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 	jobname := fmt.Sprintf("%s%s", jobtag,
 		time.Now().UTC().Format("2006-01-02T15:04:05Z"))
 
-	attachmentName := fmt.Sprintf("virtual1403_%s.pdf", jobname)
+	if !user.DisableEmailDelivery {
+		attachmentName := fmt.Sprintf("virtual1403_%s.pdf", jobname)
 
-	err = mailer.Send(a.mailconfig, user.Email,
-		"Virtual 1403 printout "+jobinfo,
-		"The intern in the machine room has carefully collated your job and "+
-			"prepared it for delivery. Please find it attached to this "+
-			"message.\r\n\r\n"+
-			"The font used in the attached PDF is 1403 Vintage Mono from "+
-			"Slanted Hall, used under license.\r\n",
-		attachmentName, pdfBuffer.Bytes())
-	if err != nil {
-		log.Printf("ERROR: error sending email: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		err = mailer.Send(a.mailconfig, user.Email,
+			"Virtual 1403 printout "+jobinfo,
+			"The intern in the machine room has carefully collated your job and "+
+				"prepared it for delivery. Please find it attached to this "+
+				"message.\r\n\r\n"+
+				"The font used in the attached PDF is 1403 Vintage Mono from "+
+				"Slanted Hall, used under license.\r\n",
+			attachmentName, pdfBuffer.Bytes())
+		if err != nil {
+			log.Printf("ERROR: error sending email: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		log.Printf("INFO:  sent %d pages to %s", pagecount, user.Email)
+	} else {
+		log.Printf("INFO:  processed %d pages for %s", pagecount, user.Email)
 	}
-
-	log.Printf("INFO:  sent %d pages to %s", pagecount, user.Email)
 
 	// Try to log the job to the database
 	if err = a.db.LogJob(user.Email, jobinfo, pagecount,

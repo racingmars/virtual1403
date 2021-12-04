@@ -174,6 +174,7 @@ func (app *application) userInfo(w http.ResponseWriter, r *http.Request) {
 		"chargedPages":        pageCount,
 		"chargedJobs":         jobCount,
 		"pdfRetention":        app.pdfCleanupDays,
+		"emailDisabled":       u.DisableEmailDelivery,
 	}
 
 	if responseValues["passwordError"] != nil {
@@ -858,4 +859,41 @@ func (app *application) pdf(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Length", strconv.Itoa(len(pdf)))
 	w.WriteHeader(http.StatusOK)
 	w.Write(pdf)
+}
+
+func (app *application) changeDelivery(w http.ResponseWriter, r *http.Request) {
+	// Verify we have a logged in, valid user
+	u := app.checkLoggedInUser(r)
+	if u == nil {
+		// No logged in user
+		app.session.Destroy(r)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Only POST is allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	action := r.URL.Query().Get("action")
+	switch action {
+	case "disable":
+		u.DisableEmailDelivery = true
+	case "enable":
+		u.DisableEmailDelivery = false
+	default:
+		http.Error(w, "Action must be disable or enable",
+			http.StatusBadRequest)
+		return
+	}
+
+	if err := app.db.SaveUser(*u); err != nil {
+		app.serverError(w, err.Error())
+		return
+	}
+
+	log.Printf("INFO:  User %s changed email delivery preference: %s", u.Email,
+		action)
+	http.Redirect(w, r, "user", http.StatusSeeOther)
 }

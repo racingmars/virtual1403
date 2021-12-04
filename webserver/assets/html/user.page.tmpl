@@ -126,6 +126,19 @@ access_key: "{{.apiKey}}"</pre></p>
 </div>
 
 <div class="column">
+<p class="is-size-5 block">Email Preferences</p>
+{{ if .emailDisabled }}
+    <p class="block">Job PDFs are <strong>not</strong> being sent via email.</p>
+    <form method="post" action="changeDelivery?action=enable" class="block">
+    <input class="button is-warning" type="submit" value="Enable email job delivery">
+    </form>
+{{ else }}
+    <p class="block">Job PDFs <strong>are</strong> being sent via email.</p>
+    <form method="post" action="changeDelivery?action=disable" class="block">
+    <input class="button is-warning" type="submit" value="Disable email job delivery">
+    </form>
+{{ end }}
+
 <p class="is-size-5 block">Change password</p>
 {{with .passwordError}}
     <div class="notification is-danger block">
@@ -185,7 +198,7 @@ access_key: "{{.apiKey}}"</pre></p>
         <div class="field-body">
             <div class="field">
                 <div class="control">
-                    <input type="submit" class="button is-primary" value="Change Password">
+                    <input type="submit" class="button is-warning" value="Change Password">
                 </div>
             </div>
         </div>
