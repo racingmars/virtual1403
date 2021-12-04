@@ -853,9 +853,16 @@ func (app *application) pdf(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("INFO:  User %s retrieved PDF for job %d", u.Email, id)
 
+	jobtag := job.JobInfo
+	if jobtag != "" {
+		jobtag = jobtag + "-"
+	}
+	jobname := fmt.Sprintf("%s%s", jobtag,
+		job.Time.UTC().Format("2006-01-02T150405Z"))
+
 	w.Header().Add("Content-Type", "application/pdf")
 	w.Header().Add("Content-Disposition",
-		fmt.Sprintf("attachment; filename=\"virtual1403-job-%d.pdf\"", id))
+		fmt.Sprintf("attachment; filename=\"virtual1403_%s.pdf\"", jobname))
 	w.Header().Add("Content-Length", strconv.Itoa(len(pdf)))
 	w.WriteHeader(http.StatusOK)
 	w.Write(pdf)

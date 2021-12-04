@@ -118,7 +118,7 @@ func readConfig(path string) (ServerConfig, []error) {
 
 	if c.PDFDaysCleanup < 1 {
 		errs = append(errs, fmt.Errorf(
-			"pdf_days_cleanup is required and must be >0"))
+			"pdf_cleanup_days is required and must be >0"))
 	}
 
 	return c, errs
