@@ -23,7 +23,7 @@
         {{range .}}
             <tr>
                 <td>{{ if .HasPDF }}
-                    <a href="pdf?sharekey={{ .ShareKey }}"><img src="/static/pdf.png" alt="PDF" width="33" height="24"></a>
+                    <a href="pdf?sharekey={{ .ShareKey }}" target="_blank"><img src="/static/pdf.png" alt="PDF" width="33" height="24"></a>
                 {{ end }}</td>
                 <td>{{.Time.Format "2006-01-02 15:04:05"}}</td>
                 <td>{{ .JobInfo }}</td>

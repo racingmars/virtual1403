@@ -873,7 +873,7 @@ func (app *application) pdf(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-Type", "application/pdf")
 	w.Header().Add("Content-Disposition",
-		fmt.Sprintf("attachment; filename=\"virtual1403_%s.pdf\"", jobname))
+		fmt.Sprintf("inline; filename=\"virtual1403_%s.pdf\"", jobname))
 	w.Header().Add("Content-Length", strconv.Itoa(len(pdf)))
 	w.WriteHeader(http.StatusOK)
 	w.Write(pdf)
