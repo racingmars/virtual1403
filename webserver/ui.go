@@ -315,7 +315,7 @@ func (app *application) adminListJobs(w http.ResponseWriter, r *http.Request) {
 
 	jobs, err := app.db.GetJobLog(100)
 	if err != nil {
-		http.Error(w, "Internal Server Error", 500)
+		app.serverError(w, err.Error())
 		return
 	}
 
@@ -831,7 +831,7 @@ func (app *application) pdf(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := binary.ReadUvarint(bytes.NewReader(msg))
+	id, err := bytesToUint64BE(msg)
 	if err != nil {
 		// Invalid message...which shouldn't be possible since we already
 		// verified the signature and our code should only have created
@@ -923,10 +923,22 @@ func (app *application) addPDFShareKeys(jobs []model.JobLogEntry) {
 		}
 
 		// Encode the ID and sign it
-		logID := make([]byte, 64/8) // 64-bit uint
-		binary.PutUvarint(logID, jobs[i].ID)
+		logID := uint64ToBytesBE(jobs[i].ID)
 		sig := auth.Sum(logID, app.shareKey)
 		logID = append(logID, sig[:]...)
 		jobs[i].ShareKey = hex.EncodeToString(logID)
 	}
+}
+
+func uint64ToBytesBE(in uint64) []byte {
+	var buf bytes.Buffer
+	binary.Write(&buf, binary.BigEndian, &in)
+	return buf.Bytes()
+}
+
+func bytesToUint64BE(in []byte) (uint64, error) {
+	inrdr := bytes.NewReader(in)
+	var out uint64
+	err := binary.Read(inrdr, binary.BigEndian, &out)
+	return out, err
 }

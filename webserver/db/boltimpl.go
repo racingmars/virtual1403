@@ -266,8 +266,7 @@ func (db *boltimpl) DeleteUser(email, who string) error {
 		if err != nil {
 			return err
 		}
-		logID := make([]byte, 64/8) // 64-bit uint
-		binary.PutUvarint(logID, nextID)
+		logID := uint64ToBytesBE(nextID)
 		if err := deleteLogBucket.Put(logID, deleteLogJSON); err != nil {
 			return err
 		}
@@ -393,8 +392,7 @@ func (db *boltimpl) LogJob(email, jobinfo string, pages int, pdf []byte) error {
 		if err != nil {
 			return err
 		}
-		logID := make([]byte, 64/8) // 64-bit uint
-		binary.PutUvarint(logID, nextID)
+		logID := uint64ToBytesBE(nextID)
 		logBucket.Put(logID, logentryjson)
 
 		// Also maintain an index into the job log by user. The key is the
@@ -433,8 +431,7 @@ func (db *boltimpl) GetPDF(id uint64) ([]byte, error) {
 	err := db.bdb.View(func(tx *bolt.Tx) error {
 		pdfBucket := tx.Bucket([]byte(pdfBucketName))
 
-		logID := make([]byte, 64/8) // 64-bit uint
-		binary.PutUvarint(logID, id)
+		logID := uint64ToBytesBE(id)
 
 		pdf = pdfBucket.Get(logID)
 		if len(pdf) == 0 {
@@ -547,8 +544,7 @@ func (db *boltimpl) GetJob(id uint64) (model.JobLogEntry, error) {
 	err := db.bdb.View(func(tx *bolt.Tx) error {
 		logBucket := tx.Bucket([]byte(jobLogBucketName))
 
-		logID := make([]byte, 64/8) // 64-bit uint
-		binary.PutUvarint(logID, id)
+		logID := uint64ToBytesBE(id)
 
 		jobLogJSON := logBucket.Get(logID)
 		if len(jobLogJSON) == 0 {
@@ -661,4 +657,10 @@ func (db *boltimpl) CleanPDFs(cutoff time.Time) {
 	} else {
 		log.Printf("INFO:  PDF cleanup deleted %d PDFs", n)
 	}
+}
+
+func uint64ToBytesBE(in uint64) []byte {
+	var buf bytes.Buffer
+	binary.Write(&buf, binary.BigEndian, &in)
+	return buf.Bytes()
 }
