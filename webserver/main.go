@@ -54,6 +54,7 @@ type application struct {
 	printerSeats          chan bool
 	inactiveMonthsCleanup int
 	pdfCleanupDays        int
+	shareKey              *[db.ShareSecretKeyLength]byte
 }
 
 //go:embed IBMPlexMono-Regular.ttf
@@ -161,6 +162,15 @@ func main() {
 	app.session = sessions.New(sessionSecret)
 	app.session.Lifetime = 3 * time.Hour
 
+	// Set secret key for the PDF download links
+	shareSecret, err := app.db.GetShareSecret()
+	if err != nil {
+		log.Fatalf("FATAL: unable to get share secret key: %v", err)
+	}
+	log.Printf("INFO:  got share secret: %s",
+		hex.EncodeToString(shareSecret))
+	app.shareKey = (*[db.ShareSecretKeyLength]byte)(shareSecret)
+
 	// Build UI routes
 	mux := http.NewServeMux()
 	mux.Handle("/favicon.ico", http.HandlerFunc(serveFavicon))
@@ -178,7 +188,7 @@ func main() {
 	mux.Handle("/resend", app.session.Enable(http.HandlerFunc(
 		app.resendVerification)))
 	mux.Handle("/verify", app.session.Enable(http.HandlerFunc(app.verifyUser)))
-	mux.Handle("/pdf", app.session.Enable(http.HandlerFunc(app.pdf)))
+	mux.Handle("/pdf", http.HandlerFunc(app.pdf))
 	mux.Handle("/changeDelivery", app.session.Enable(http.HandlerFunc(app.changeDelivery)))
 
 	// Admin pages

@@ -21,10 +21,11 @@ import "time"
 // along with virtual1403. If not, see <https://www.gnu.org/licenses/>.
 
 type JobLogEntry struct {
-	ID      uint64
-	Email   string
-	Time    time.Time
-	Pages   int
-	JobInfo string
-	HasPDF  bool
+	ID       uint64
+	Email    string
+	Time     time.Time
+	Pages    int
+	JobInfo  string
+	HasPDF   bool
+	ShareKey string `json:"-"` // just used by the web UI
 }

@@ -19,6 +19,9 @@ package main
 // along with virtual1403. If not, see <https://www.gnu.org/licenses/>.
 
 import (
+	"bytes"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -31,6 +34,7 @@ import (
 	"github.com/racingmars/virtual1403/webserver/db"
 	"github.com/racingmars/virtual1403/webserver/mailer"
 	"github.com/racingmars/virtual1403/webserver/model"
+	"golang.org/x/crypto/nacl/auth"
 )
 
 // home serves the home page with the login and signup forms. If the user is
@@ -139,6 +143,7 @@ func (app *application) userInfo(w http.ResponseWriter, r *http.Request) {
 			u.Email, err)
 		// We'll allow the page to render, it'll just have an empty job log
 	}
+	app.addPDFShareKeys(joblog)
 
 	// Is user currently in violation of quota?
 	jobCount, pageCount, quotaErr := app.checkQuota(u.Email)
@@ -214,10 +219,12 @@ func (app *application) userJobs(w http.ResponseWriter, r *http.Request) {
 			u.Email, err)
 		// We'll allow the page to render, it'll just have an empty job log
 	}
+	app.addPDFShareKeys(joblog)
 
 	responseValues := map[string]interface{}{
-		"isAdmin": u.Admin,
-		"joblog":  joblog,
+		"isAdmin":      u.Admin,
+		"joblog":       joblog,
+		"pdfRetention": app.pdfCleanupDays,
 	}
 
 	app.render(w, r, "userjoblist.page.tmpl", responseValues)
@@ -800,44 +807,48 @@ func (app *application) checkLoggedInUser(r *http.Request) *model.User {
 }
 
 func (app *application) pdf(w http.ResponseWriter, r *http.Request) {
-	// Verify we have a logged in, valid user
-	u := app.checkLoggedInUser(r)
-	if u == nil {
-		// No logged in user
-		app.session.Destroy(r)
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
-
-	idStr := r.URL.Query().Get("id")
-	if idStr == "" {
-		http.Error(w, "id query parameter must be present",
+	keyStr := r.URL.Query().Get("sharekey")
+	if keyStr == "" {
+		http.Error(w, "keyStr query parameter must be present",
 			http.StatusBadRequest)
 		return
 	}
 
-	id, err := strconv.ParseUint(idStr, 10, 64)
+	// Can we hex decode, and is the result the length of our message (a
+	// uint64) plus signature?
+	keyRaw, err := hex.DecodeString(keyStr)
+	if err != nil || len(keyRaw) != 64/8+auth.Size {
+		http.Error(w, "keyStr is invalid", http.StatusBadRequest)
+		return
+	}
+
+	msg := keyRaw[0 : 64/8] // uint64
+	sig := keyRaw[64/8:]
+	if !auth.Verify(sig, msg, app.shareKey) {
+		// Signature verification failed; this is not a genuine PDF link.
+		// We will treat all failures as 404 not found.
+		http.Error(w, "PDF for job no longer available", http.StatusNotFound)
+		return
+	}
+
+	id, err := binary.ReadUvarint(bytes.NewReader(msg))
 	if err != nil {
-		http.Error(w, "id query parameter must be a non-negative integer",
-			http.StatusBadRequest)
+		// Invalid message...which shouldn't be possible since we already
+		// verified the signature and our code should only have created
+		// correct messages in the first place.
+		log.Printf("ERROR: valid signature on invalid message: %s", keyStr)
+		http.Error(w, "PDF for job no longer available", http.StatusNotFound)
 		return
 	}
 
 	job, err := app.db.GetJob(id)
 	if err == db.ErrNotFound {
-		http.Error(w, "job not found", http.StatusNotFound)
+		http.Error(w, "PDF for job no longer available", http.StatusNotFound)
 		return
 	}
 	if err != nil {
 		app.serverError(w, "db error getting job for PDF retrieval: "+
 			err.Error())
-		return
-	}
-
-	if !strings.EqualFold(u.Email, job.Email) {
-		log.Printf("INFO:  User %s tried to retrieve PDF for job %d, "+
-			"which belongs to %s", u.Email, id, job.Email)
-		http.Error(w, "not authorized for that job", http.StatusForbidden)
 		return
 	}
 
@@ -851,7 +862,7 @@ func (app *application) pdf(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("INFO:  User %s retrieved PDF for job %d", u.Email, id)
+	log.Printf("INFO:  Retrieved PDF for job %d", id)
 
 	jobtag := job.JobInfo
 	if jobtag != "" {
@@ -903,4 +914,19 @@ func (app *application) changeDelivery(w http.ResponseWriter, r *http.Request) {
 	log.Printf("INFO:  User %s changed email delivery preference: %s", u.Email,
 		action)
 	http.Redirect(w, r, "user", http.StatusSeeOther)
+}
+
+func (app *application) addPDFShareKeys(jobs []model.JobLogEntry) {
+	for i := range jobs {
+		if !jobs[i].HasPDF {
+			continue
+		}
+
+		// Encode the ID and sign it
+		logID := make([]byte, 64/8) // 64-bit uint
+		binary.PutUvarint(logID, jobs[i].ID)
+		sig := auth.Sum(logID, app.shareKey)
+		logID = append(logID, sig[:]...)
+		jobs[i].ShareKey = hex.EncodeToString(logID)
+	}
 }

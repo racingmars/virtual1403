@@ -24,11 +24,13 @@ import (
 
 	"github.com/racingmars/virtual1403/webserver/model"
 	"golang.org/x/crypto/acme/autocert"
+	"golang.org/x/crypto/nacl/auth"
 )
 
 var ErrNotFound = errors.New("not found")
 
 const SessionSecretKeyLength = 32
+const ShareSecretKeyLength = auth.KeySize
 
 type DB interface {
 	// Close will close the database.
@@ -90,6 +92,13 @@ type DB interface {
 	// database generates a random value which will be used for the life of
 	// the database file.
 	GetSessionSecret() ([]byte, error)
+
+	// GetShareSecret will return a 32-byte random value to use as the PDF
+	// link authentication key. If none exists in the database, this function
+	// will generate one and save it. Essentially, on first startup, each new
+	// database generates a random value which will be used for the life of
+	// the database file.
+	GetShareSecret() ([]byte, error)
 
 	// We also use our database as an autocert cache
 	autocert.Cache

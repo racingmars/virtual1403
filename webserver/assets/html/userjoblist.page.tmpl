@@ -12,6 +12,8 @@
 
 <p class="block"><a href="user">🏠 Home</a></p>
 
+<p class="block"><p><strong>PDFs are kept for {{ .pdfRetention }} days</strong>.</p>
+<p class="block">To share a PDF, right-click on the PDF icon and select "Copy Link" and anyone you send the link to will be able to download the PDF.</p>
 {{ with .joblog }}
 <table class="table">
     <thead>
@@ -21,7 +23,7 @@
         {{range .}}
             <tr>
                 <td>{{ if .HasPDF }}
-                    <a href="pdf?id={{ .ID }}"><img src="/static/pdf.png" alt="PDF" width="33" height="24"></a>
+                    <a href="pdf?sharekey={{ .ShareKey }}"><img src="/static/pdf.png" alt="PDF" width="33" height="24"></a>
                 {{ end }}</td>
                 <td>{{.Time.Format "2006-01-02 15:04:05"}}</td>
                 <td>{{ .JobInfo }}</td>

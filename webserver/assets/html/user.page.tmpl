@@ -105,7 +105,7 @@ access_key: "{{.apiKey}}"</pre></p>
 
 <div class="column">
 <p class="is-size-5">Recent print jobs (<a href="userjobs">More...</a>)</p>
-<p>PDFs are kept for {{ .pdfRetention }} days.</p>
+<p><strong>PDFs are kept for {{ .pdfRetention }} days</strong>. To share a PDF, right-click on the PDF icon and select "Copy Link" and anyone you send the link to will be able to download the PDF.</p>
 <table class="table">
     <thead>
         <tr><th>PDF</th><th>Time <span class="is-size-7">(UTC)</span></th><th>Name</th><th>Pages</th></tr>
@@ -114,7 +114,7 @@ access_key: "{{.apiKey}}"</pre></p>
         {{range .joblog}}
             <tr>
                 <td>{{ if .HasPDF }}
-                    <a href="pdf?id={{ .ID }}"><img src="/static/pdf.png" alt="PDF" width="33" height="24"></a>
+                    <a href="pdf?sharekey={{ .ShareKey }}"><img src="/static/pdf.png" alt="PDF" width="33" height="24"></a>
                 {{ end }}</td>
                 <td>{{.Time.Format "2006-01-02 15:04:05"}}</td>
                 <td>{{ .JobInfo }}</td>

@@ -47,6 +47,7 @@ const (
 	deleteLogBucketName        = "delete_log"
 	pdfBucketName              = "pdfs"
 	sessionSecretKeyConfigName = "session_secret"
+	shareSecretKeyConfigName   = "share_secret"
 )
 
 func NewDB(path string) (DB, error) {
@@ -569,12 +570,20 @@ func (db *boltimpl) GetJob(id uint64) (model.JobLogEntry, error) {
 }
 
 func (db *boltimpl) GetSessionSecret() ([]byte, error) {
-	result := make([]byte, SessionSecretKeyLength)
+	return db.getOrGenKey(sessionSecretKeyConfigName, SessionSecretKeyLength)
+}
+
+func (db *boltimpl) GetShareSecret() ([]byte, error) {
+	return db.getOrGenKey(shareSecretKeyConfigName, ShareSecretKeyLength)
+}
+
+func (db *boltimpl) getOrGenKey(name string, size int) ([]byte, error) {
+	result := make([]byte, size)
 	err := db.bdb.Update(func(tx *bolt.Tx) error {
 		configBucket := tx.Bucket([]byte(configBucketName))
 
 		// Does the session key already exist in the database?
-		v := configBucket.Get([]byte(sessionSecretKeyConfigName))
+		v := configBucket.Get([]byte(name))
 		if len(v) == len(result) {
 			copy(result, v)
 			return nil
@@ -584,12 +593,12 @@ func (db *boltimpl) GetSessionSecret() ([]byte, error) {
 		// them.
 		if n, err := rand.Read(result); err != nil {
 			return err
-		} else if n != SessionSecretKeyLength {
+		} else if n != size {
 			return fmt.Errorf("got %d random bytes instead of %d", n,
-				SessionSecretKeyLength)
+				size)
 		}
 
-		if err := configBucket.Put([]byte(sessionSecretKeyConfigName),
+		if err := configBucket.Put([]byte(name),
 			result); err != nil {
 			return err
 		}
