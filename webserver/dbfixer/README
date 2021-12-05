@@ -1,0 +1,10 @@
+Before commit 5be9b876691f0a11586490e408ab36fd1ec039fd, the database entries
+which used uint64 keys used little-endian byte order. This caused the keys to
+not sort of sequence order. Beginning in commit
+5be9b876691f0a11586490e408ab36fd1ec039fd, the keys are now in big-endian byte
+order.
+
+This utility converts an old LE database into a new BE database. It should be
+run exactly once when upgrading a server from commit
+9073522ad45f36b756317d91f4682e58bb05ee52 to commit
+5be9b876691f0a11586490e408ab36fd1ec039fd.
