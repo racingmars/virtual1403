@@ -210,7 +210,7 @@ func fixSimple(old, new *bolt.DB, bucket string) error {
 	return old.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		return b.ForEach(func(k, v []byte) error {
-			id, err := bytesToUint64LE(k)
+			id, err := bytesToUint64Uvarint(k)
 			if err != nil {
 				return err
 			}
@@ -234,7 +234,7 @@ func fixUserJobIndex(old, new *bolt.DB) error {
 					len(parts))
 			}
 
-			id, err := bytesToUint64LE(parts[1])
+			id, err := bytesToUint64Uvarint(parts[1])
 			if err != nil {
 				return err
 			}
@@ -254,9 +254,6 @@ func uint64ToBytesBE(in uint64) []byte {
 	return buf.Bytes()
 }
 
-func bytesToUint64LE(in []byte) (uint64, error) {
-	inrdr := bytes.NewReader(in)
-	var out uint64
-	err := binary.Read(inrdr, binary.LittleEndian, &out)
-	return out, err
+func bytesToUint64Uvarint(in []byte) (uint64, error) {
+	return binary.ReadUvarint(bytes.NewReader(in))
 }
