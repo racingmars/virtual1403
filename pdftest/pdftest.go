@@ -9,11 +9,12 @@ import (
 )
 
 func main() {
-	font, err := loadFontData("../fonts/1403VintageMonoLimited-Regular.ttf")
+	font, err := loadFontData("../../../Downloads/IBM140310Pitch-Regular-MRW.ttf")
 	if err != nil {
 		panic(err)
 	}
-	printer, err := vprinter.New1403(font)
+	printer, err := vprinter.New1403(font, 10, 5, true, false,
+		vprinter.DarkGreen, vprinter.LightGreen)
 	if err != nil {
 		panic(err)
 	}
@@ -26,11 +27,11 @@ func main() {
 	printer.AddLine("000000 <-- THESE ZEROS WILL BE OVERTYPED WITH SLASHES (/)", false)
 	printer.AddLine("//////", true)
 	printer.AddLine("", true)
-	printer.AddLine("FORM FEED FOLLOWS THIS LINE", true)
-	printer.AddLine("", true)
 	printer.AddLine("THE FOLLOWING LINE MAKES BOLD TEXT BY OVERSTRIKING THE LINE WITH THE SAME TEXT:", true)
 	printer.AddLine("THIS IS BOLD TEXT AND THIS IS REGULAR TEXT.", false)
 	printer.AddLine("THIS IS BOLD TEXT", true)
+	printer.AddLine("", true)
+	printer.AddLine("FORM FEED FOLLOWS THIS LINE", true)
 
 	printer.NewPage()
 

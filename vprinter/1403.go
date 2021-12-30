@@ -29,29 +29,18 @@ import (
 const maxLinesPerPage = 66
 const maxLineCharacters = 132
 
-// Colors
-const (
-	// greenDarkR = 70
-	// greenDarkG = 150
-	// greenDarkB = 70
+type ColorRGB struct{ R, G, B int }
 
-	greenDarkR = 99
-	greenDarkG = 182
-	greenDarkB = 99
-
-	// greenLightR = 195
-	// greenLightG = 229
-	// greenLightB = 195
-
-	greenLightR = 219
-	greenLightG = 240
-	greenLightB = 219
-)
+var DarkGreen = ColorRGB{99, 182, 99}
+var LightGreen = ColorRGB{219, 240, 219}
 
 // our implementation of the Job interface simulating an IBM 1403 printer.
 type virtual1403 struct {
 	pdf              *gofpdf.Fpdf
 	font             []byte
+	fontSize         float64
+	skipLines        int
+	forceUpper       bool
 	curLine          int
 	pages            int
 	leftMargin       float64
@@ -65,11 +54,15 @@ const (
 	v1403H = 792  // 11 inches high
 )
 
-const v1430FontSize = 11.4
+//           VintageMono use font size 11.4; worn use 10
+func New1403(font []byte, fontsize float64, skipLines int, forceUpper,
+	drawBG bool, dark, light ColorRGB) (Job, error) {
 
-func New1403(font []byte) (Job, error) {
 	j := &virtual1403{
-		font: font,
+		font:       font,
+		fontSize:   fontsize,
+		skipLines:  skipLines,
+		forceUpper: forceUpper,
 	}
 
 	j.pdf = gofpdf.NewCustom(&gofpdf.InitType{
@@ -89,14 +82,14 @@ func New1403(font []byte) (Job, error) {
 		tpl.SetXY(0, 0)
 		tpl.SetMargins(0, 0, 0)
 		tpl.SetAutoPageBreak(false, 0)
-		drawBackgroundTemplate(tpl)
+		drawBackgroundTemplate(tpl, drawBG, dark, light)
 	})
 
 	// We will dynamically determine how wide 132 characters of the chosen
 	// font is so that we can correctly position (center) the output area on
 	// the page. The left margin of our text output area will be the center
 	// of the page minus half of the line width.
-	j.pdf.SetFont("userfont", "", v1430FontSize)
+	j.pdf.SetFont("userfont", "", j.fontSize)
 	j.leftMargin = v1403W/2 - determineLineWidth(j.pdf)/2
 
 	j.NewPage()
@@ -111,8 +104,10 @@ func (job *virtual1403) AddLine(s string, linefeed bool) int {
 	if len(s) > maxLineCharacters {
 		s = s[0:maxLineCharacters]
 	}
-	// 1403 only had capital letters
-	s = strings.ToUpper(s)
+	// 1403 only had capital letters; we'll enforce that if requested
+	if job.forceUpper {
+		s = strings.ToUpper(s)
+	}
 	job.pdf.SetXY(job.leftMargin+job.overstrikeOffset,
 		float64(job.curLine*12)+.25)
 	job.pdf.CellFormat(0, 12, s, "", 0, "LM", false, 0, "")
@@ -128,10 +123,10 @@ func (job *virtual1403) AddLine(s string, linefeed bool) int {
 func (job *virtual1403) NewPage() int {
 	job.pdf.AddPage()
 	job.pdf.UseTemplate(job.background)
-	job.pdf.SetFont("userfont", "", v1430FontSize)
-	// simulating a 1403 with form control that skips the first 5 physically
+	job.pdf.SetFont("userfont", "", job.fontSize)
+	// simulating a 1403 with form control that can skip the first physically
 	// printable lines.
-	job.curLine = 5
+	job.curLine = job.skipLines
 	job.pages++
 	return job.pages
 }
@@ -140,16 +135,21 @@ func (job *virtual1403) EndJob(w io.Writer) (int, error) {
 	return job.pages, job.pdf.Output(w)
 }
 
-func drawBackgroundTemplate(pdf *gofpdf.Tpl) {
+func drawBackgroundTemplate(pdf *gofpdf.Tpl, drawBG bool, dark,
+	light ColorRGB) {
+
 	const feedHoleRadius = 5.5
 
-	// Alignment fiducial
-	pdf.SetDrawColor(greenDarkR, greenDarkG, greenDarkB)
-	pdf.SetLineWidth(.7)
-	pdf.Line(20, 54-feedHoleRadius*2, 20, 54+feedHoleRadius*2)
-	pdf.Line(20-feedHoleRadius*2, 54, 20+feedHoleRadius*2, 54)
-	pdf.SetLineWidth(1.5)
-	pdf.Circle(20, 54, feedHoleRadius+.6, "D")
+	// Alignment fiducial. We need to do this before the tractor holes so we
+	// "punch" the hole through the alignment fiducial.
+	if drawBG {
+		pdf.SetDrawColor(dark.R, dark.G, dark.B)
+		pdf.SetLineWidth(.7)
+		pdf.Line(20, 54-feedHoleRadius*2, 20, 54+feedHoleRadius*2)
+		pdf.Line(20-feedHoleRadius*2, 54, 20+feedHoleRadius*2, 54)
+		pdf.SetLineWidth(1.5)
+		pdf.Circle(20, 54, feedHoleRadius+.6, "D")
+	}
 
 	// Draw tractor feed circles -- top and bottom holes are larger
 	pdf.SetDrawColor(200, 200, 200)
@@ -169,8 +169,13 @@ func drawBackgroundTemplate(pdf *gofpdf.Tpl) {
 		pdf.Circle(v1403W-20, y, feedHoleRadius, "FD")
 	}
 
+	if !drawBG {
+		pdf.SetTextColor(0, 0, 0)
+		return
+	}
+
 	// Draw form number - 1412THE
-	pdf.SetTextColor(greenDarkR, greenDarkG, greenDarkB)
+	pdf.SetTextColor(dark.R, dark.G, dark.B)
 	pdf.SetFont("helvetica", "", 7)
 	pdf.SetXY(v1403W-4, 55)
 	pdf.TransformBegin()
@@ -179,7 +184,7 @@ func drawBackgroundTemplate(pdf *gofpdf.Tpl) {
 	pdf.TransformEnd()
 
 	// Print area alignment arrows
-	pdf.SetFillColor(greenLightR, greenLightG, greenLightB)
+	pdf.SetFillColor(light.R, light.G, light.B)
 	// Left side
 	pdf.Polygon([]gofpdf.PointType{
 		{X: 40 + 2, Y: 72 - 11},
@@ -201,7 +206,7 @@ func drawBackgroundTemplate(pdf *gofpdf.Tpl) {
 	const bY float64 = v1403H - 29 // bottom-left of "1"
 	const bU float64 = 0.6         // 1 grid unit in points
 	pdf.SetLineWidth(1)
-	pdf.SetDrawColor(greenDarkR, greenDarkG, greenDarkB)
+	pdf.SetDrawColor(dark.R, dark.G, dark.B)
 	pdf.MoveTo(bX+bU*5, bY-bU*17)
 	pdf.LineTo(bX+bU*5, bY-bU*3.5)
 	pdf.LineTo(bX, bY-bU*3.5)
@@ -220,7 +225,7 @@ func drawBackgroundTemplate(pdf *gofpdf.Tpl) {
 	// Green bars. We are drawing the fill separate from the lines, because it
 	// looks like the horizontal lines are slightly heavier than the vertical
 	// lines.
-	pdf.SetFillColor(greenLightR, greenLightG, greenLightB)
+	pdf.SetFillColor(light.R, light.G, light.B)
 	for i := 0; i < 10; i++ {
 		pdf.Rect(40, float64(72+i*72)-.5, v1403W-80, 36, "F")
 	}
@@ -229,7 +234,7 @@ func drawBackgroundTemplate(pdf *gofpdf.Tpl) {
 	// the margin number columns, the other lines are only as wide as the
 	// greenbars. The extra 0.25-point wiggle-room is to make the corners of
 	// the vertical and horizontal lines square with each other.
-	pdf.SetDrawColor(greenDarkR, greenDarkG, greenDarkB)
+	pdf.SetDrawColor(dark.R, dark.G, dark.B)
 	pdf.SetLineWidth(.7)
 	pdf.Line(30-.25, 72-.5, v1403W-30+.25, 72-.5)             // top
 	pdf.Line(30-.25, v1403H-1-.5, v1403W-30+.25, v1403H-1-.5) // bottom
@@ -238,7 +243,7 @@ func drawBackgroundTemplate(pdf *gofpdf.Tpl) {
 	}
 
 	// Vertical lines
-	pdf.SetDrawColor(greenDarkR, greenDarkG, greenDarkB)
+	pdf.SetDrawColor(dark.R, dark.G, dark.B)
 	pdf.SetLineWidth(.5)
 	pdf.Line(30, 72-.5, 30, v1403H-1-.5)
 	pdf.Line(40, 72-.5, 40, v1403H-1-.5)
@@ -248,7 +253,7 @@ func drawBackgroundTemplate(pdf *gofpdf.Tpl) {
 
 	// Left margin numbers
 	pdf.SetFont("Helvetica", "", 7)
-	pdf.SetTextColor(greenDarkR, greenDarkG, greenDarkB)
+	pdf.SetTextColor(dark.R, dark.G, dark.B)
 	for i := 0; i < 60; i++ {
 		pdf.SetXY(30, float64(72+i*12))
 		// The centering of the margin numbers looks better if we use
@@ -263,7 +268,7 @@ func drawBackgroundTemplate(pdf *gofpdf.Tpl) {
 
 	// Right margin numbers
 	pdf.SetFont("Helvetica", "", 7)
-	pdf.SetTextColor(greenDarkR, greenDarkG, greenDarkB)
+	pdf.SetTextColor(dark.R, dark.G, dark.B)
 	for i := 0; i < 80; i++ {
 		pdf.SetXY(v1403W-40, float64(72+i*9))
 		// The centering of the margin numbers looks better if we use

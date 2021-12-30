@@ -183,7 +183,8 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 	defer d.Close()
 
 	// Create our virtual printer.
-	job, err := vprinter.New1403(a.font)
+	job, err := vprinter.New1403(a.font, 11.4, 5, true, true,
+		vprinter.DarkGreen, vprinter.LightGreen)
 	if err != nil {
 		log.Printf("ERROR: couldn't create virtual printer: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

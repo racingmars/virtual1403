@@ -44,7 +44,8 @@ func newPDFOutputHandler(outputDir string, font []byte) (
 	}
 	var err error
 
-	o.job, err = vprinter.New1403(o.font)
+	o.job, err = vprinter.New1403(o.font, 11.4, 5, true, true,
+		vprinter.DarkGreen, vprinter.LightGreen)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +65,8 @@ func (o *pdfOutputHandler) EndOfJob(jobinfo string) {
 	// new job.
 	defer func() {
 		var err error
-		o.job, err = vprinter.New1403(o.font)
+		o.job, err = vprinter.New1403(o.font, 11.4, 5, true, true,
+			vprinter.DarkGreen, vprinter.LightGreen)
 		if err != nil {
 			log.Printf("ERROR: couldn't re-initialize virtual 1403: %v\n",
 				err)
