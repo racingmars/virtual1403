@@ -20,6 +20,7 @@ package vprinter
 
 import (
 	_ "embed"
+	"strings"
 )
 
 var DarkGreen = ColorRGB{99, 182, 99}
@@ -50,7 +51,7 @@ func NewProfile(profile string, fontOverride []byte,
 		tempSize = sizeOverride
 	}
 
-	switch profile {
+	switch strings.ToLower(profile) {
 	case "default-green":
 		return New1403(tempFont, tempSize, 5, true, true, DarkGreen, LightGreen)
 	case "default-green-noskip":

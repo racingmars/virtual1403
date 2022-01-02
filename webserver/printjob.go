@@ -57,7 +57,7 @@ import (
 // 5. The Content-Encoding header value must be "zstd".
 // 6. An optional query parameter named "profile" selects the font and paper
 //    style. No profile parameter, or an unknown value, will result in the
-//    profile.
+//    default profile. Profile names are *not* case-sensitive.
 //
 // Print directives:
 //
