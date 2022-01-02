@@ -23,9 +23,48 @@ access_key: "my-api-key-123"
 #
 # When mode is "local", the output directory is required. Optionally, you may
 # provide a font file to use in the PDFs. Leave font_file commented out to
-# use the default font.
+# use the default font. The font in font_file is used for the "default"
+# profiles (see below).
 #
 output_directory: "pdfs"
 #font_file: "my-printer-font.ttf"
 #
 #############################################################################
+
+### PROFILE #################################################################
+#
+# Profile selects the font and paper background you wish for your jobs, and
+# applies to both online and local mode.
+#
+# Supported profiles are:
+#
+# default-green, default-green-noskip, default-blue, default-blue-noskip,
+# default-plain, default-plain-noskip, retro-green, retro-green-noskip,
+# retro-blue, retro-blue-noskip, retro-plain, retro-plain-noskip,
+# modern-green, modern-green-noskip, modern-blue, modern-blue-noskip,
+# modern-plain, modern-plain-noskip
+#
+# "default" profiles use the font specified in the config file (or, when using
+# the 1403.bitnet.systems online service, 1403 Vintage Mono) or falls back to
+# the default embedded IBM Plex Mono font. Only uppercase letters are used.
+#
+# "retro" profiles use the authentic scanned 1403 output font from
+# <http://ibm-1401.info/Sched2008December.html#1403-Font>.
+# This has a very limited character set, matching the standard "A" chain of
+# 48 characters (but currently missing &).
+#
+# "modern" used IBM Plex Mono and allows lowercase letters.
+#
+# The "green" and "blue" variants are green-bar and blue-bar paper, and
+# "plain" has no background on the paper, just the tractor feed holes.
+#
+# The "noskip" variants allow printing on each of the 66 printable lines per
+# page; without "noskip" the profiles automatically skip the first 5 lines
+# per page, as was a common forms control default for 1403 printers driven
+# by JES2 so the first line of each page is the title line and the remaining
+# lines are in the numbered portion of the page.
+#
+# If an unknown or empty profile is configured, "default-green" will be used.
+#
+#############################################################################
+profile: "default-green"

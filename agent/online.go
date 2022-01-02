@@ -30,20 +30,25 @@ import (
 )
 
 type onlineOutputHandler struct {
-	buf bytes.Buffer
-	enc *zstd.Encoder
-	w   *bufio.Writer
-	api string
-	key string
+	buf     bytes.Buffer
+	enc     *zstd.Encoder
+	w       *bufio.Writer
+	api     string
+	key     string
+	profile string
 }
 
-func newOnlineOutputHandler(api, key string) scanner.PrinterHandler {
+func newOnlineOutputHandler(api, key, profile string) scanner.PrinterHandler {
 	o := &onlineOutputHandler{
-		api: api,
-		key: key,
+		api:     api,
+		key:     key,
+		profile: profile,
 	}
 	o.enc, _ = zstd.NewWriter(&o.buf)
 	o.w = bufio.NewWriter(o.enc)
+	if o.profile == "" {
+		o.profile = "default"
+	}
 
 	return o
 }
@@ -82,7 +87,7 @@ func (o *onlineOutputHandler) EndOfJob(jobinfo string) {
 	// We now have a complete zstd-compressed job stream in o.buf.
 
 	req, err := http.NewRequest(http.MethodPost,
-		o.api, &o.buf)
+		o.api+"?profile="+o.profile, &o.buf)
 	if err != nil {
 		log.Printf("ERROR: unable to create HTTP request: %v", err)
 		return

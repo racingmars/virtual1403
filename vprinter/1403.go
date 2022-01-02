@@ -31,9 +31,6 @@ const maxLineCharacters = 132
 
 type ColorRGB struct{ R, G, B int }
 
-var DarkGreen = ColorRGB{99, 182, 99}
-var LightGreen = ColorRGB{219, 240, 219}
-
 // our implementation of the Job interface simulating an IBM 1403 printer.
 type virtual1403 struct {
 	pdf              *gofpdf.Fpdf

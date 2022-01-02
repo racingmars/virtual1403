@@ -26,6 +26,11 @@ virtual1403 is developed in collaboration with Moshix
 (https://github.com/moshix/), and the greenbar paper design is based on photos
 he provided of real 1403 printouts he has.
 
+Includes the IBM1403 font from
+<http://ibm-1401.info/Sched2008December.html#1403-Font>,
+which the author(s) believe to be in the public domain or otherwise available
+to embed in this application.
+
 Font conversion notes
 ---------------------
 

@@ -35,17 +35,16 @@ type pdfOutputHandler struct {
 	font      []byte
 }
 
-func newPDFOutputHandler(outputDir string, font []byte) (
+func newPDFOutputHandler(outputDir, profile string, fontOverride []byte) (
 	scanner.PrinterHandler, error) {
 
 	o := &pdfOutputHandler{
 		outputDir: outputDir,
-		font:      font,
+		font:      fontOverride,
 	}
 	var err error
 
-	o.job, err = vprinter.New1403(o.font, 11.4, 5, true, true,
-		vprinter.DarkGreen, vprinter.LightGreen)
+	o.job, err = vprinter.NewProfile(profile, fontOverride, 11.4)
 	if err != nil {
 		return nil, err
 	}

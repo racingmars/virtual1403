@@ -35,11 +35,6 @@ import (
 	"github.com/racingmars/virtual1403/vprinter"
 )
 
-// We will embed IBM Plex Mono as a nice default font to use if the user
-// doesn't specify an alternative in the configuration file.
-//go:embed IBMPlexMono-Regular.ttf
-var defaultFont []byte
-
 // version can be set at build time
 var version string = "unknown"
 
@@ -50,6 +45,7 @@ type configuration struct {
 	APIKey          string `yaml:"access_key"`
 	OutputDir       string `yaml:"output_directory"`
 	FontFile        string `yaml:"font_file"`
+	Profile         string `yaml:"profile"`
 }
 
 var trace = flag.Bool("trace", false, "enable trace logging")
@@ -101,9 +97,8 @@ func main() {
 		// it in a PDF, and that it is a fixed-width font.
 		var font []byte
 		if conf.FontFile == "" {
-			// easy... just use default font
+			// easy... just use default font by passing null font into profile
 			log.Printf("INFO:  Using default font")
-			font = defaultFont
 		} else {
 			log.Printf("INFO:  Attempting to load font %s", conf.FontFile)
 			font, err = vprinter.LoadFont(conf.FontFile)
@@ -114,7 +109,7 @@ func main() {
 		}
 
 		// Set up our output handler
-		handler, err = newPDFOutputHandler(conf.OutputDir, font)
+		handler, err = newPDFOutputHandler(conf.OutputDir, conf.Profile, font)
 		if err != nil {
 			log.Fatalf("FATAL: %v", err)
 		}
@@ -122,7 +117,8 @@ func main() {
 		// setup for online mode
 		log.Printf("INFO:  will use online print API at `%s`",
 			conf.ServiceAddress)
-		handler = newOnlineOutputHandler(conf.ServiceAddress, conf.APIKey)
+		handler = newOnlineOutputHandler(conf.ServiceAddress, conf.APIKey,
+			conf.Profile)
 	}
 
 	// Hercules sometimes closes connections on the printer socket device even

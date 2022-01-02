@@ -55,6 +55,9 @@ import (
 // 4. The request body must be compressed using the zstd compression
 //    algorithm.
 // 5. The Content-Encoding header value must be "zstd".
+// 6. An optional query parameter named "profile" selects the font and paper
+//    style. No profile parameter, or an unknown value, will result in the
+//    profile.
 //
 // Print directives:
 //
@@ -134,6 +137,10 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 	// Now that we have confirmed this is a valid user, if we are limiting
 	// concurrency of the print service, we will wait until a seat is
 	// available.
+	// TODO: This feature was added to support a font that had a limited number
+	// of concurrent seats in its license terms. We could restrict this to the
+	// profile(s) that use it, but at the moment, performance isn't a problem
+	// waiting for jobs to complete.
 	if a.printerSeats != nil {
 		// Writing to the channel will block if the queue is full.
 		a.printerSeats <- true
@@ -183,8 +190,9 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 	defer d.Close()
 
 	// Create our virtual printer.
-	job, err := vprinter.New1403(a.font, 11.4, 5, true, true,
-		vprinter.DarkGreen, vprinter.LightGreen)
+	profileName := r.URL.Query().Get("profile")
+	log.Printf("INFO:  requested profile: %s", profileName)
+	job, err := vprinter.NewProfile(profileName, a.font, 11.4)
 	if err != nil {
 		log.Printf("ERROR: couldn't create virtual printer: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

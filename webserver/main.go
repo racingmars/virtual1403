@@ -57,9 +57,6 @@ type application struct {
 	shareKey              *[db.ShareSecretKeyLength]byte
 }
 
-//go:embed IBMPlexMono-Regular.ttf
-var defaultFont []byte
-
 //go:embed favicon.ico
 var favicon []byte
 
@@ -84,7 +81,7 @@ func main() {
 			log.Fatalf("FATAL: unable to load font: %v", err)
 		}
 	} else {
-		app.font = defaultFont
+		app.font = nil // no font override for profiles that accept one
 	}
 
 	// Copy the configured quota values to the application state
