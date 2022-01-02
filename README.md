@@ -6,7 +6,7 @@ The executable component is in the agent folder; see the README file in that dir
 License
 -------
 
-    Copyright 2021 Matthew R. Wilson <mwilson@mattwilson.org>
+    Copyright 2021-2022 Matthew R. Wilson <mwilson@mattwilson.org>
 
     This file is part of virtual1403
     <https://github.com/racingmars/virtual1403>.

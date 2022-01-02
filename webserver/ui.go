@@ -68,6 +68,12 @@ func (app *application) docsSetup(w http.ResponseWriter, r *http.Request) {
 	app.render(w, r, "docs.page.tmpl", responseVars)
 }
 
+// docsProfiles serves the setup documentation page. This is unauthenticated.
+func (app *application) docsProfiles(w http.ResponseWriter, r *http.Request) {
+	responseVars := make(map[string]interface{})
+	app.render(w, r, "profiles.page.tmpl", responseVars)
+}
+
 // login handles user login requests and if successful sets the session cookie
 // user value to the logged in user's email address.
 func (app *application) login(w http.ResponseWriter, r *http.Request) {

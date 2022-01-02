@@ -173,6 +173,7 @@ func main() {
 	mux.Handle("/favicon.ico", http.HandlerFunc(serveFavicon))
 	mux.Handle("/static/", http.FileServer(http.FS(assets.Content)))
 	mux.Handle("/docs/setup", http.HandlerFunc(app.docsSetup))
+	mux.Handle("/docs/profiles", http.HandlerFunc(app.docsProfiles))
 	mux.Handle("/", app.session.Enable(http.HandlerFunc(app.home)))
 	mux.Handle("/login", app.session.Enable(http.HandlerFunc(app.login)))
 	mux.Handle("/signup", app.session.Enable(http.HandlerFunc(app.signup)))

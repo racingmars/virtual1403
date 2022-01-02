@@ -1,0 +1,129 @@
+{{template "base" .}}
+
+{{define "title"}}Available Printer Profiles{{end}}
+
+{{define "main"}}
+
+<p class="block"><a href="/">← Return Home</a></p>
+
+<div class="content">
+<p>Virtual1403 provides several printer profiles to choose from. A profile is a combination of font, paper background, and form control. To use a profile, set the profile name in your agent config.yaml file, such as:</p>
+
+<pre>
+profile: "retro-blue"
+</pre>
+
+<p><strong>Note: you must use version 0.2.0 or later of the agent for the profile setting to work</strong>. <a href="https://github.com/racingmars/virtual1403/releases">Download the latest agent version here</a>.</p>
+
+<p>There are three font options, three paper background options, and the option to skip the first 5 lines on each page (typical form control from examples of output from MVS that we have seen) or print on all 66 lines.</p>
+
+<p><strong>Fonts</strong></p>
+<ul>
+    <li>The "default" font is <a href="https://1403.slantedhall.com/">1403 Vintage Mono</a> from Slanted Hall.</li>
+    <li>The "retro" font was built from <a href="http://ibm-1401.info/Sched2008December.html#1403-Font">scans of real 1403 printer output</a> at the Computer History Museum. This has a very limited character set, consistent with the default "A" chain of a real 1403, but missing the "&amp;" character.</li>
+    <li>The "modern" font is <a href="https://www.ibm.com/plex/">IBM Plex Mono</a>, and the modern profiles allow both upper- and lowercase letters.</li>
+</ul>
+
+<p><strong>Background</strong></p>
+<p>Each font is available on green- or blue-bar paper, or plain tractor-feed paper with no background printed.</p>
+
+<p><strong>Form Control</strong></p>
+<p>The "-noskip" version of each profile allows printing on each of the 66 printable lines on the page; profile without -noskip will skip the first 5 lines of each page so that the title line rests above the numbered page area.</p>
+</div> <!-- content -->
+
+<p><strong>Samples</strong></p>
+<table class="table">
+<tr>
+    <td>
+        <p>default-green:</p>
+        <img class="profilesample" src="/static/profiles/default-green-1.sample.small.png" alt="default-green profile sample" width="319" height="162">
+    </td>
+    <td>
+        <p>default-green-noskip:</p>
+        <img class="profilesample" src="/static/profiles/default-green-noskip-1.sample.small.png" alt="default-green-noskip profile sample" width="319" height="162">
+    </td>
+</tr>
+<tr>
+    <td>
+        <p>default-blue:</p>
+        <img class="profilesample" src="/static/profiles/default-blue-1.sample.small.png" alt="default-blue profile sample" width="319" height="162">
+    </td>
+    <td>
+        <p>default-blue-noskip:</p>
+        <img class="profilesample" src="/static/profiles/default-blue-noskip-1.sample.small.png" alt="default-blue-noskip profile sample" width="319" height="162">
+    </td>
+</tr>
+<tr>
+    <td>
+        <p>default-plain:</p>
+        <img class="profilesample" src="/static/profiles/default-plain-1.sample.small.png" alt="default-plain profile sample" width="319" height="162">
+    </td>
+    <td>
+        <p>default-plain-noskip:</p>
+        <img class="profilesample" src="/static/profiles/default-plain-noskip-1.sample.small.png" alt="default-plain-noskip profile sample" width="319" height="162">
+    </td>
+</tr>
+
+<tr>
+    <td>
+        <p>retro-green:</p>
+        <img class="profilesample" src="/static/profiles/retro-green-1.sample.small.png" alt="retro-green profile sample" width="319" height="162">
+    </td>
+    <td>
+        <p>retro-green-noskip:</p>
+        <img class="profilesample" src="/static/profiles/retro-green-noskip-1.sample.small.png" alt="retro-green-noskip profile sample" width="319" height="162">
+    </td>
+</tr>
+<tr>
+    <td>
+        <p>retro-blue:</p>
+        <img class="profilesample" src="/static/profiles/retro-blue-1.sample.small.png" alt="retro-blue profile sample" width="319" height="162">
+    </td>
+    <td>
+        <p>retro-blue-noskip:</p>
+        <img class="profilesample" src="/static/profiles/retro-blue-noskip-1.sample.small.png" alt="retro-blue-noskip profile sample" width="319" height="162">
+    </td>
+</tr>
+<tr>
+    <td>
+        <p>retro-plain:</p>
+        <img class="profilesample" src="/static/profiles/retro-plain-1.sample.small.png" alt="retro-plain profile sample" width="319" height="162">
+    </td>
+    <td>
+        <p>retro-plain-noskip:</p>
+        <img class="profilesample" src="/static/profiles/retro-plain-noskip-1.sample.small.png" alt="retro-plain-noskip profile sample" width="319" height="162">
+    </td>
+</tr>
+
+<tr>
+    <td>
+        <p>modern-green:</p>
+        <img class="profilesample" src="/static/profiles/modern-green-1.sample.small.png" alt="modern-green profile sample" width="319" height="162">
+    </td>
+    <td>
+        <p>modern-green-noskip:</p>
+        <img class="profilesample" src="/static/profiles/modern-green-noskip-1.sample.small.png" alt="modern-green-noskip profile sample" width="319" height="162">
+    </td>
+</tr>
+<tr>
+    <td>
+        <p>modern-blue:</p>
+        <img class="profilesample" src="/static/profiles/modern-blue-1.sample.small.png" alt="modern-blue profile sample" width="319" height="162">
+    </td>
+    <td>
+        <p>modern-blue-noskip:</p>
+        <img class="profilesample" src="/static/profiles/modern-blue-noskip-1.sample.small.png" alt="modern-blue-noskip profile sample" width="319" height="162">
+    </td>
+</tr>
+<tr>
+    <td>
+        <p>modern-plain:</p>
+        <img class="profilesample" src="/static/profiles/modern-plain-1.sample.small.png" alt="modern-plain profile sample" width="319" height="162">
+    </td>
+    <td>
+        <p>modern-plain-noskip:</p>
+        <img class="profilesample" src="/static/profiles/modern-plain-noskip-1.sample.small.png" alt="modern-plain-noskip profile sample" width="319" height="162">
+    </td>
+</tr>
+</table>
+{{end}}
