@@ -18,6 +18,7 @@
         <th>Last Job <span class="is-size-7">(UTC)</span></th>
         <th>Verified</th>
         <th>Enabled</th>
+        <th>Email Jobs</th>
         <th>Unlimited</th>
         <th>Admin</th>
     </tr></thead>
@@ -31,6 +32,7 @@
             <td>{{.LastJob.Format "2006-01-02 15:04:05"}}</td>
             <td><input type="checkbox" disabled {{ if .Verified }}checked{{ end }}></td>
             <td><input type="checkbox" disabled {{ if .Enabled }}checked{{ end }}></td>
+            <td><input type="checkbox" disabled {{ if not .DisableEmailDelivery }}checked{{ end }}></td>
             <td><input type="checkbox" disabled {{ if .Unlimited }}checked{{ end }}></td>
             <td><input type="checkbox" disabled {{ if .Admin }}checked{{ end }}></td>
         </tr>

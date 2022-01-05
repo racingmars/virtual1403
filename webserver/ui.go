@@ -381,17 +381,18 @@ func (app *application) adminEditUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responseValues := map[string]interface{}{
-		"isAdmin":    u.Admin, // logged-in user, not target user
-		"verified":   user.Verified,
-		"name":       user.FullName,
-		"email":      user.Email,
-		"admin":      user.Admin,
-		"active":     user.Enabled,
-		"unlimited":  user.Unlimited,
-		"pageCount":  user.PageCount,
-		"jobCount":   user.JobCount,
-		"joblog":     joblog,
-		"signupDate": user.SignupDate,
+		"isAdmin":              u.Admin, // logged-in user, not target user
+		"verified":             user.Verified,
+		"name":                 user.FullName,
+		"email":                user.Email,
+		"admin":                user.Admin,
+		"active":               user.Enabled,
+		"unlimited":            user.Unlimited,
+		"pageCount":            user.PageCount,
+		"jobCount":             user.JobCount,
+		"joblog":               joblog,
+		"signupDate":           user.SignupDate,
+		"disableEmailDelivery": user.DisableEmailDelivery,
 	}
 
 	log.Printf("INFO  %s accessed user %s", u.Email, user.Email)
@@ -448,6 +449,7 @@ func (app *application) adminEditUserPost(w http.ResponseWriter,
 	newPassword := r.Form.Get("new-password")
 	newName := r.Form.Get("name")
 	active := r.Form.Get("active")
+	deliverEmail := r.Form.Get("emailDelivery")
 	unlimited := r.Form.Get("unlimited")
 	admin := r.Form.Get("admin")
 
@@ -463,6 +465,12 @@ func (app *application) adminEditUserPost(w http.ResponseWriter,
 		user.Enabled = true
 	} else {
 		user.Enabled = false
+	}
+
+	if deliverEmail == "yes" {
+		user.DisableEmailDelivery = false
+	} else {
+		user.DisableEmailDelivery = true
 	}
 
 	if unlimited == "yes" {
