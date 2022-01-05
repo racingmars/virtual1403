@@ -26,14 +26,16 @@ import "log"
 func getNextByte(s *scanner, b byte) stateFunc {
 	wasNewJob := s.newjob
 	if s.newjob {
-		log.Printf("INFO:  receiving data from Hercules for new print job")
+		log.Printf(
+			"INFO:  [%s] receiving data from Hercules for new print job",
+			s.tag)
 		s.newjob = false
 	}
 
 	switch b {
 	case charLF:
 		if s.trace {
-			log.Println("TRACE: scanner got LF in getNextByte")
+			log.Printf("TRACE: [%s] scanner got LF in getNextByte", s.tag)
 		}
 		return haveLF
 	case charCR:
@@ -45,18 +47,18 @@ func getNextByte(s *scanner, b byte) stateFunc {
 			// want to trigger the special beginning-of-job form feed
 			// handling, since that's probably what's coming next).
 			if s.trace {
-				log.Println("TRACE: ignoring CR at beginning of job")
+				log.Printf("TRACE: [%s] ignoring CR at beginning of job", s.tag)
 			}
 			s.newjob = true
 			return getNextByte
 		}
 		if s.trace {
-			log.Println("TRACE: scanner got CR in getNextByte")
+			log.Printf("TRACE: [%s] scanner got CR in getNextByte", s.tag)
 		}
 		return haveCR
 	case charFF:
 		if s.trace {
-			log.Println("TRACE: scanner got FF in getNextByte")
+			log.Printf("TRACE: [%s] scanner got FF in getNextByte", s.tag)
 		}
 		if wasNewJob {
 			// if the very first byte we receive is a form feed, then it's
@@ -64,7 +66,7 @@ func getNextByte(s *scanner, b byte) stateFunc {
 			// reason, it doesn't eject jobs right after they finish). We're
 			// already starting on a new page, so we'll just suppress it.
 			if s.trace {
-				log.Println("TRACE: ignoring FF at beginning of job")
+				log.Printf("TRACE: [%s] ignoring FF at beginning of job", s.tag)
 			}
 			return getNextByte
 		}
@@ -106,19 +108,19 @@ func haveCR(s *scanner, b byte) stateFunc {
 	switch b {
 	case charCR:
 		if s.trace {
-			log.Println("TRACE: scanner got CR in haveCR")
+			log.Printf("TRACE: [%s] scanner got CR in haveCR", s.tag)
 		}
 		s.emitLine(false)
 		return haveCR
 	case charLF:
 		if s.trace {
-			log.Println("TRACE: scanner got LF in haveCR")
+			log.Printf("TRACE: [%s] scanner got LF in haveCR", s.tag)
 		}
 		s.emitLine(true)
 		return getNextByte
 	case charFF:
 		if s.trace {
-			log.Println("TRACE: scanner got FF in haveCR")
+			log.Printf("TRACE: [%s] scanner got FF in haveCR", s.tag)
 		}
 		s.emitLineAndPage()
 		return getNextByte
@@ -136,19 +138,19 @@ func haveLF(s *scanner, b byte) stateFunc {
 	switch b {
 	case charCR:
 		if s.trace {
-			log.Println("TRACE: scanner got CR in haveLF")
+			log.Printf("TRACE: [%s] scanner got CR in haveLF", s.tag)
 		}
 		s.emitLine(true)
 		return getNextByte
 	case charLF:
 		if s.trace {
-			log.Println("TRACE: scanner got LF in haveLF")
+			log.Printf("TRACE: [%s] scanner got LF in haveLF", s.tag)
 		}
 		s.emitLine(true)
 		return haveLF
 	case charFF:
 		if s.trace {
-			log.Println("TRACE: scanner got FF in haveLF")
+			log.Printf("TRACE: [%s] scanner got FF in haveLF", s.tag)
 		}
 		s.emitLineAndPage()
 		return getNextByte

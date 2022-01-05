@@ -1,6 +1,6 @@
 package main
 
-// Copyright 2021 Matthew R. Wilson <mwilson@mattwilson.org>
+// Copyright 2021-2022 Matthew R. Wilson <mwilson@mattwilson.org>
 //
 // This file is part of virtual1403
 // <https://github.com/racingmars/virtual1403>.
@@ -19,17 +19,14 @@ package main
 // along with virtual1403. If not, see <https://www.gnu.org/licenses/>.
 
 import (
-	_ "embed"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
+	"sync"
 	"time"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/racingmars/virtual1403/scanner"
 	"github.com/racingmars/virtual1403/vprinter"
@@ -37,16 +34,6 @@ import (
 
 // version can be set at build time
 var version string = "unknown"
-
-type configuration struct {
-	HerculesAddress string `yaml:"hercules_address"`
-	Mode            string `yaml:"mode"`
-	ServiceAddress  string `yaml:"service_address"`
-	APIKey          string `yaml:"access_key"`
-	OutputDir       string `yaml:"output_directory"`
-	FontFile        string `yaml:"font_file"`
-	Profile         string `yaml:"profile"`
-}
 
 var trace = flag.Bool("trace", false, "enable trace logging")
 
@@ -60,7 +47,6 @@ func main() {
 		return
 	}
 
-	var handler scanner.PrinterHandler
 	startupMessage()
 
 	if *trace {
@@ -68,12 +54,12 @@ func main() {
 	}
 
 	// Load configuration file
-	conf, err := loadConfig("config.yaml")
+	inputs, outputs, err := loadConfig("config.yaml")
 	if err != nil {
-		log.Fatalf("FATAL: %v", err)
+		log.Fatalf("FATAL: Unable to read config.yaml. %v", err)
 	}
 
-	errs := validateConfig(conf)
+	errs := validateConfig(inputs, outputs)
 	if errs != nil {
 		for _, err := range errs {
 			log.Printf("ERROR: %s", err.Error())
@@ -81,44 +67,81 @@ func main() {
 		log.Fatalf("FATAL: invalid configuration")
 	}
 
-	if conf.Mode == "local" {
-		// setup for local mode
+	// Set up outputs
+	for name, conf := range outputs {
+		if conf.Mode == "local" {
+			// setup for local mode
 
-		// Make sure the output directory exists
-		if err = verifyOrCreateDir(conf.OutputDir); err != nil {
-			log.Fatalf("FATAL: %v", err.Error())
-		}
-		log.Printf("INFO:  Will create PDFs in directory `%s`",
-			conf.OutputDir)
-
-		// Verify we have a font we can use. If the user doesn't provide a
-		// font, we will use our embedded copy of IBM Plex Mono. If the user
-		// does provide a font, we will make sure we can read the file, use
-		// it in a PDF, and that it is a fixed-width font.
-		var font []byte
-		if conf.FontFile == "" {
-			// easy... just use default font by passing null font into profile
-			log.Printf("INFO:  Using default font")
-		} else {
-			log.Printf("INFO:  Attempting to load font %s", conf.FontFile)
-			font, err = vprinter.LoadFont(conf.FontFile)
-			if err != nil {
-				log.Fatalf("FATAL: couldn't load requested font: %v", err)
+			// Make sure the output directory exists
+			if err = verifyOrCreateDir(conf.OutputDir); err != nil {
+				log.Fatalf("FATAL: [%s] %v", name, err.Error())
 			}
-			log.Printf("INFO:  Successfully loaded font %s", conf.FontFile)
-		}
 
-		// Set up our output handler
-		handler, err = newPDFOutputHandler(conf.OutputDir, conf.Profile, font)
-		if err != nil {
-			log.Fatalf("FATAL: %v", err)
+			// Verify we have a font we can use. If the user doesn't provide a
+			// font, we will use our embedded copy of IBM Plex Mono. If the user
+			// does provide a font, we will make sure we can read the file, use
+			// it in a PDF, and that it is a fixed-width font.
+			var font []byte
+			if conf.FontFile == "" {
+				// easy... just use default font by setting font to null
+				log.Printf("INFO:  [%s] Using default font", name)
+			} else {
+				log.Printf("INFO:  [%s] Attempting to load font %s", name,
+					conf.FontFile)
+				font, err = vprinter.LoadFont(conf.FontFile)
+				if err != nil {
+					log.Fatalf("FATAL: [%s] couldn't load requested font: %v",
+						name, err)
+				}
+				log.Printf("INFO:  [%s] Successfully loaded font %s", name,
+					conf.FontFile)
+			}
+			o := outputs[name]
+			o.font = font
+			outputs[name] = o
 		}
-	} else if conf.Mode == "online" {
-		// setup for online mode
-		log.Printf("INFO:  will use online print API at `%s`",
-			conf.ServiceAddress)
-		handler = newOnlineOutputHandler(conf.ServiceAddress, conf.APIKey,
-			conf.Profile)
+	}
+
+	// Start a thread for each input and run until they all stop...which will
+	// usually be never; typically user will Ctrl-C out of the agent. We'll
+	// wait 250ms between startups so the initial log messages from each don't
+	// intermingle.
+	var wg sync.WaitGroup
+	for input := range inputs {
+		wg.Add(1)
+		// the output for the input is guaranteed to exist because of the
+		// earlier config validation.
+		go runPrinter(input, inputs[input].Output, inputs[input],
+			outputs[inputs[input].Output], &wg)
+		time.Sleep(250 * time.Millisecond)
+	}
+	wg.Wait()
+}
+
+func runPrinter(inputName, outputName string, input InputConfig,
+	output OutputConfig, wg *sync.WaitGroup) {
+
+	defer wg.Done()
+	var handler scanner.PrinterHandler
+	var err error
+
+	log.Printf("INFO:  starting input/output pair [%s]/[%s]",
+		inputName, outputName)
+	if output.Mode == "local" {
+		log.Printf("INFO:  [%s] Will create PDFs in directory `%s`",
+			inputName, output.OutputDir)
+		// Set up our output handler
+		handler, err = newPDFOutputHandler(output.OutputDir, output.Profile,
+			output.font, inputName)
+		if err != nil {
+			log.Printf("ERROR: [%s] %v", inputName, err)
+			return
+		}
+	} else {
+		log.Printf("INFO:  [%s] will use online print API at `%s`",
+			inputName, output.ServiceAddress)
+		handler = newOnlineOutputHandler(output.ServiceAddress, output.APIKey,
+			output.Profile, inputName)
 	}
 
 	// Hercules sometimes closes connections on the printer socket device even
@@ -130,81 +153,34 @@ func main() {
 	// loop forever with a 10 second pause between connection failures or
 	// disconnects.
 	for {
-		handleHercules(conf.HerculesAddress, handler)
-		log.Printf("INFO:  Re-trying Hercules connection in 10 seconds...")
+		handleHercules(input.HerculesAddress, handler, inputName)
+		log.Printf("INFO:  [%s] Re-trying Hercules connection in 10 seconds...",
+			inputName)
 		time.Sleep(10 * time.Second)
 	}
 }
 
-func loadConfig(path string) (configuration, error) {
-	var c configuration
-	f, err := os.Open(path)
-	if err != nil {
-		return c, err
-	}
-	defer f.Close()
-
-	decoder := yaml.NewDecoder(f)
-	if err := decoder.Decode(&c); err != nil {
-		return c, err
-	}
-
-	return c, nil
-}
-
-func validateConfig(c configuration) []error {
-	var errs []error
-
-	// Verify required fields are present
-	if c.HerculesAddress == "" {
-		errs = append(errs,
-			errors.New("must set 'hercules_address' in the config file"))
-	}
-
-	if !(c.Mode == "local" || c.Mode == "online") {
-		errs = append(errs,
-			errors.New("'mode' must be either 'local' or 'online'"))
-	}
-
-	if c.Mode == "local" {
-		if c.OutputDir == "" {
-			errs = append(errs,
-				errors.New("must set 'output_directory' in the config file"))
-		}
-	}
-
-	if c.Mode == "online" {
-		if c.ServiceAddress == "" {
-			errs = append(errs,
-				errors.New("must set 'service_address' in the config file"))
-		}
-		if c.APIKey == "" {
-			errs = append(errs,
-				errors.New("must set 'api_key' in the config file"))
-		}
-	}
-
-	return errs
-}
-
-func handleHercules(address string, handler scanner.PrinterHandler) {
-	log.Printf("INFO:  Connecting to Hercules on %s...\n", address)
+func handleHercules(address string, handler scanner.PrinterHandler,
+	inputName string) {
+	log.Printf("INFO:  [%s] Connecting to Hercules on %s...", inputName,
+		address)
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
-		log.Printf("ERROR: Couldn't connect: %v\n", err)
+		log.Printf("ERROR: [%s] Couldn't connect: %v", inputName, err)
 		return
 	}
 	defer conn.Close()
-	log.Printf("INFO:  Connection successful.\n")
+	log.Printf("INFO:  [%s] Connection successful.", inputName)
 
-	err = scanner.Scan(conn, handler, *trace)
+	err = scanner.ScanWithLogTag(conn, handler, *trace, inputName)
 	if err == io.EOF {
 		// we're done!
-		log.Printf("INFO:  Hercules disconnected.\n")
+		log.Printf("WARN:  [%s] Hercules disconnected.", inputName)
 		return
 	}
 	if err != nil {
-		log.Printf("ERROR: error reading from Hercules: %s\n", err)
+		log.Printf("ERROR: [%s] error reading from Hercules: %s", inputName,
+			err)
 		return
 	}
 }
@@ -244,7 +220,7 @@ func startupMessage() {
 	fmt.Fprintln(os.Stderr, `  \_/ |_|_|   \__|\__,_|\__,_|_| |_|  |_|  \___/____/`)
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "virtual1403 <https://github.com/racingmars/virtual1403/>")
-	fmt.Fprintln(os.Stderr, "  copyright 2021 Matthew R. Wilson.")
+	fmt.Fprintln(os.Stderr, "  copyright 2021-2022 Matthew R. Wilson.")
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "virtual1403 is free software, distributed under the GPL v3")
 	fmt.Fprintln(os.Stderr, "  (or later) license; see COPYING for details.")

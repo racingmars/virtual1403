@@ -68,3 +68,43 @@ output_directory: "pdfs"
 #
 #############################################################################
 profile: "default-green"
+
+### ADVANCED CONFIGURATION - MULTIPLE INPUTS/OUTPUTS ########################
+#
+# The agent is able to connect to more than one source (e.g. multiple copies
+# of Hercules, or multiple sockdev printers on one copy of Hercules) and more
+# than one output (e.g. different profiles in online more and/or different
+# folders and profiles in local mode).
+#
+# You must always provide the input and output default configuration above
+# in this configuration file. The information above will create both an
+# input and output named "default".
+#
+# You may then define additional inputs and outputs in the following config
+# sections. The additional inputs may be configured to go to the "default"
+# output, or to another named output.
+#
+# The "inputs" and "outputs" structures are YAML arrays: the hyphen (-)
+# before a member key begins a new entry in the array.
+#
+#############################################################################
+#
+#inputs:
+#- name: "extra_in_1"
+#  hercules_address: "127.0.0.1:1404"
+#  output: "default"
+#- name: "extra_in_2"
+#  hercules_address: "another.system.example.com:1403"
+#  output: "extra_out_local"
+#
+#outputs:
+#- name: "extra_out_online"
+#  mode: "online"
+#  service_address: "https://1403.bitnet.systems/print"
+#  access_key: "my-api-key-123"
+#  profile: "retro-plain-noskip"
+#- name: "extra_out_local"
+#  mode: "local"
+#  output_directory: "pdfs_2"
+#  font_file: "my_font.ttf"
+#  profile: "default-green"

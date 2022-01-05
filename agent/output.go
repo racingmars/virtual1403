@@ -33,14 +33,16 @@ type pdfOutputHandler struct {
 	job       vprinter.Job
 	outputDir string
 	font      []byte
+	inputName string
 }
 
-func newPDFOutputHandler(outputDir, profile string, fontOverride []byte) (
-	scanner.PrinterHandler, error) {
+func newPDFOutputHandler(outputDir, profile string, fontOverride []byte,
+	inputName string) (scanner.PrinterHandler, error) {
 
 	o := &pdfOutputHandler{
 		outputDir: outputDir,
 		font:      fontOverride,
+		inputName: inputName,
 	}
 	var err error
 
@@ -67,10 +69,11 @@ func (o *pdfOutputHandler) EndOfJob(jobinfo string) {
 		o.job, err = vprinter.New1403(o.font, 11.4, 5, true, true,
 			vprinter.DarkGreen, vprinter.LightGreen)
 		if err != nil {
-			log.Printf("ERROR: couldn't re-initialize virtual 1403: %v\n",
-				err)
+			log.Printf("ERROR: [%s] couldn't re-initialize virtual 1403: %v",
+				o.inputName, err)
 			log.Printf(
-				"ERROR: application is probably in a bad state, please restart.\n")
+				"ERROR: [%s] application is probably in a bad state, "+
+					"please restart.", o.inputName)
 		}
 	}()
 
@@ -83,15 +86,18 @@ func (o *pdfOutputHandler) EndOfJob(jobinfo string) {
 
 	f, err := os.Create(filename)
 	if err != nil {
-		log.Printf("ERROR: couldn't create output file: %v\n", err)
+		log.Printf("ERROR: [%s] couldn't create output file: %v",
+			o.inputName, err)
 		return
 	}
 	defer f.Close()
 	n, err := o.job.EndJob(f)
 	if err != nil {
-		log.Printf("ERROR: couldn't write PDF output: %v\n", err)
+		log.Printf("ERROR: [%s] couldn't write PDF output: %v", o.inputName,
+			err)
 		return
 	}
 
-	log.Printf("INFO:  wrote %d page PDF to %s\n", n, filename)
+	log.Printf("INFO:  [%s] wrote %d page PDF to %s", o.inputName, n,
+		filename)
 }

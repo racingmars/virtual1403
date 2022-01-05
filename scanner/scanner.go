@@ -54,19 +54,34 @@ type scanner struct {
 	handler  PrinterHandler
 	newjob   bool
 	trace    bool
+	tag      string
 }
 
 // Scan will read from a net.Conn, conn, which should be sent data from
 // Hercules printer output. It will output lines (trimmed to 132 characters
 // if necessary) and page breaks and identify the end of jobs in the printer
 // data stream.
+//
+// This function exists for backwards-compatibility and just calls
+// ScanWithLogTag with the tag "default"
 func Scan(conn net.Conn, handler PrinterHandler, trace bool) error {
+	return ScanWithLogTag(conn, handler, trace, "default")
+}
+
+// Scan will read from a net.Conn, conn, which should be sent data from
+// Hercules printer output. It will output lines (trimmed to 132 characters
+// if necessary) and page breaks and identify the end of jobs in the printer
+// data stream.
+func ScanWithLogTag(conn net.Conn, handler PrinterHandler, trace bool,
+	tag string) error {
+
 	var s scanner
 	s.conn = conn
 	s.handler = handler
 	s.nextfunc = getNextByte
 	s.newjob = true
 	s.trace = trace
+	s.tag = tag
 
 	nextByte := make([]byte, 1)
 	for {
@@ -75,7 +90,8 @@ func Scan(conn net.Conn, handler PrinterHandler, trace bool) error {
 		if !s.newjob {
 			if err := s.conn.SetReadDeadline(time.Now().Add(
 				500 * time.Millisecond)); err != nil {
-				log.Printf("ERROR: couldn't set read deadline: %v", err)
+				log.Printf("ERROR: [%s] couldn't set read deadline: %v", tag,
+					err)
 			}
 		}
 		n, err := s.conn.Read(nextByte)
@@ -86,7 +102,8 @@ func Scan(conn net.Conn, handler PrinterHandler, trace bool) error {
 			return err
 		} else if n != 1 {
 			log.Printf(
-				"ERROR: read 0 bytes when expecting 1; continuing read loop")
+				"ERROR: [%s] read 0 bytes when expecting 1; continuing read loop",
+				tag)
 		} else {
 			if nextByte[0] == 0xFF {
 				// This seems to be a control character that VM emits the
@@ -98,7 +115,8 @@ func Scan(conn net.Conn, handler PrinterHandler, trace bool) error {
 				// clearly not meant to be a character from any typical
 				// mainframe print job.
 				if s.trace {
-					log.Println("TRACE: ignoring 0xFF control character")
+					log.Printf("TRACE: [%s] ignoring 0xFF control character",
+						tag)
 				}
 				continue
 			}
@@ -110,8 +128,8 @@ func Scan(conn net.Conn, handler PrinterHandler, trace bool) error {
 func (s *scanner) emitLine(linefeed bool) {
 	// Trace output for the raw line
 	if s.trace {
-		log.Printf("TRACE: (lf: %v) scanner got line: %s", linefeed,
-			hex.EncodeToString(s.curline[:s.pos]))
+		log.Printf("TRACE: [%s] (lf: %v) scanner got line: %s", s.tag,
+			linefeed, hex.EncodeToString(s.curline[:s.pos]))
 	}
 
 	// We need to build a valid UTF-8 string. For now we'll handle a couple
@@ -135,8 +153,8 @@ func (s *scanner) emitLine(linefeed bool) {
 		default:
 			if s.curline[i] > 0x7F {
 				log.Printf(
-					"WARN:  got character %02x, need to add mapping\n",
-					s.curline[i])
+					"WARN:  [%s] got character %02x, need to add mapping\n",
+					s.tag, s.curline[i])
 			}
 			r = rune(s.curline[i])
 		}
@@ -159,8 +177,8 @@ var eojRegexp = regexp.MustCompile(
 func (s *scanner) emitLineAndPage() {
 	s.emitLine(true)
 	if s.trace {
-		log.Printf("TRACE: scanner checking for end of job on line: %s",
-			s.prevline)
+		log.Printf("TRACE: [%s] scanner checking for end of job on line: %s",
+			s.tag, s.prevline)
 	}
 	if eojRegexp.MatchString(s.prevline) {
 		s.endJob(false)
@@ -197,6 +215,6 @@ func (s *scanner) endJob(wasTimeout bool) {
 
 	// No timeout for the next read awaiting beginning of the next job
 	if err := s.conn.SetReadDeadline(time.Time{}); err != nil {
-		log.Printf("ERROR: couldn't clear read deadline: %v", err)
+		log.Printf("ERROR: [%s] couldn't clear read deadline: %v", s.tag, err)
 	}
 }

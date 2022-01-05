@@ -30,19 +30,23 @@ import (
 )
 
 type onlineOutputHandler struct {
-	buf     bytes.Buffer
-	enc     *zstd.Encoder
-	w       *bufio.Writer
-	api     string
-	key     string
-	profile string
+	buf       bytes.Buffer
+	enc       *zstd.Encoder
+	w         *bufio.Writer
+	api       string
+	key       string
+	profile   string
+	inputName string
 }
 
-func newOnlineOutputHandler(api, key, profile string) scanner.PrinterHandler {
+func newOnlineOutputHandler(api, key, profile,
+	inputName string) scanner.PrinterHandler {
+
 	o := &onlineOutputHandler{
-		api:     api,
-		key:     key,
-		profile: profile,
+		api:       api,
+		key:       key,
+		profile:   profile,
+		inputName: inputName,
 	}
 	o.enc, _ = zstd.NewWriter(&o.buf)
 	o.w = bufio.NewWriter(o.enc)
@@ -89,7 +93,8 @@ func (o *onlineOutputHandler) EndOfJob(jobinfo string) {
 	req, err := http.NewRequest(http.MethodPost,
 		o.api+"?profile="+o.profile, &o.buf)
 	if err != nil {
-		log.Printf("ERROR: unable to create HTTP request: %v", err)
+		log.Printf("ERROR: [%s] unable to create HTTP request: %v",
+			o.inputName, err)
 		return
 	}
 
@@ -97,18 +102,22 @@ func (o *onlineOutputHandler) EndOfJob(jobinfo string) {
 	req.Header.Set("Content-Type", "text/x-print-job")
 	req.Header.Set("Authorization", "Bearer "+o.key)
 
-	log.Printf("INFO:  Sending print job to online print API...")
+	log.Printf("INFO:  [%s] Sending print job to online print API...",
+		o.inputName)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Printf("ERROR: unable to execute HTTP request: %v", err)
+		log.Printf("ERROR: [%s] unable to execute HTTP request: %v",
+			o.inputName, err)
 		return
 	}
 	defer resp.Body.Close()
 	defer io.ReadAll(resp.Body) // ensure keep-alive client reuse when able
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		log.Printf("INFO:  Print API response status: %s", resp.Status)
+		log.Printf("INFO:  [%s] Print API response status: %s", o.inputName,
+			resp.Status)
 	} else {
-		log.Printf("ERROR: Print API response status: %s", resp.Status)
+		log.Printf("ERROR: [%s] Print API response status: %s", o.inputName,
+			resp.Status)
 	}
 }
