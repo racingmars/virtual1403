@@ -8,7 +8,7 @@ require (
 	github.com/gorilla/handlers v1.5.1
 	github.com/jung-kurt/gofpdf v1.16.2
 	github.com/klauspost/compress v1.13.6
-	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e
+	golang.org/x/crypto v0.0.0-20220126234351-aa10faf2a1f8
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )
 
