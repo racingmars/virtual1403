@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 
 	"github.com/racingmars/virtual1403/webserver/db"
 	"github.com/racingmars/virtual1403/webserver/mailer"
@@ -48,6 +49,8 @@ type ServerConfig struct {
 	InactiveMonthsCleanup   int           `yaml:"inactive_months_cleanup"`
 	UnverifiedMonthsCleanup int           `yaml:"unverified_months_cleanup"`
 	PDFDaysCleanup          int           `yaml:"pdf_cleanup_days"`
+	NuisanceJobNames        []string      `yaml:"nuisance_job_names"`
+	nuisanceJobRegex        []*regexp.Regexp
 }
 
 func readConfig(path string) (ServerConfig, []error) {
@@ -119,6 +122,17 @@ func readConfig(path string) (ServerConfig, []error) {
 	if c.PDFDaysCleanup < 1 {
 		errs = append(errs, fmt.Errorf(
 			"pdf_cleanup_days is required and must be >0"))
+	}
+
+	// Parse the nuisance regular expressions
+	for i := range c.NuisanceJobNames {
+		r, err := regexp.Compile(c.NuisanceJobNames[i])
+		if err != nil {
+			errs = append(errs, fmt.Errorf("nuisance regex `%s` error: %v",
+				c.NuisanceJobNames[i], err))
+			continue
+		}
+		c.nuisanceJobRegex = append(c.nuisanceJobRegex, r)
 	}
 
 	return c, errs

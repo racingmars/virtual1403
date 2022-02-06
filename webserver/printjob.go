@@ -218,6 +218,18 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Unless user allows them, ignore nuisance jobs
+	if !user.AllowNuisanceJobs {
+		for i := range a.nuisanceJobs {
+			if a.nuisanceJobs[i].MatchString(jobinfo) {
+				// This is a nuisance job, we'll just ignore it.
+				log.Printf("IFNO:  ignoring job %s from %s",
+					jobinfo, user.Email)
+				return // will just return empty HTTP 200 OK
+			}
+		}
+	}
+
 	// Create the PDF
 	var pdfBuffer bytes.Buffer
 	var pagecount int

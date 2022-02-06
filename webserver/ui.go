@@ -186,6 +186,7 @@ func (app *application) userInfo(w http.ResponseWriter, r *http.Request) {
 		"chargedJobs":         jobCount,
 		"pdfRetention":        app.pdfCleanupDays,
 		"emailDisabled":       u.DisableEmailDelivery,
+		"nuisanceFilter":      !u.AllowNuisanceJobs,
 	}
 
 	if responseValues["passwordError"] != nil {
@@ -393,6 +394,7 @@ func (app *application) adminEditUser(w http.ResponseWriter, r *http.Request) {
 		"joblog":               joblog,
 		"signupDate":           user.SignupDate,
 		"disableEmailDelivery": user.DisableEmailDelivery,
+		"nuisanceFilter":       !u.AllowNuisanceJobs,
 	}
 
 	log.Printf("INFO  %s accessed user %s", u.Email, user.Email)
@@ -450,6 +452,7 @@ func (app *application) adminEditUserPost(w http.ResponseWriter,
 	newName := r.Form.Get("name")
 	active := r.Form.Get("active")
 	deliverEmail := r.Form.Get("emailDelivery")
+	nuisanceFilter := r.Form.Get("nuisanceFilter")
 	unlimited := r.Form.Get("unlimited")
 	admin := r.Form.Get("admin")
 
@@ -471,6 +474,12 @@ func (app *application) adminEditUserPost(w http.ResponseWriter,
 		user.DisableEmailDelivery = false
 	} else {
 		user.DisableEmailDelivery = true
+	}
+
+	if nuisanceFilter == "yes" {
+		user.AllowNuisanceJobs = false
+	} else {
+		user.AllowNuisanceJobs = true
 	}
 
 	if unlimited == "yes" {
@@ -926,6 +935,43 @@ func (app *application) changeDelivery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("INFO:  User %s changed email delivery preference: %s", u.Email,
+		action)
+	http.Redirect(w, r, "user", http.StatusSeeOther)
+}
+
+func (app *application) changeNuisance(w http.ResponseWriter, r *http.Request) {
+	// Verify we have a logged in, valid user
+	u := app.checkLoggedInUser(r)
+	if u == nil {
+		// No logged in user
+		app.session.Destroy(r)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Only POST is allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	action := r.URL.Query().Get("action")
+	switch action {
+	case "disable":
+		u.AllowNuisanceJobs = false
+	case "enable":
+		u.AllowNuisanceJobs = true
+	default:
+		http.Error(w, "Action must be disable or enable",
+			http.StatusBadRequest)
+		return
+	}
+
+	if err := app.db.SaveUser(*u); err != nil {
+		app.serverError(w, err.Error())
+		return
+	}
+
+	log.Printf("INFO:  User %s changed nuisance job preference: %s", u.Email,
 		action)
 	http.Redirect(w, r, "user", http.StatusSeeOther)
 }

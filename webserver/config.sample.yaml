@@ -47,6 +47,13 @@ concurrent_print_jobs: 0
 # blow their entire pages quota on a single job.
 max_lines_per_job: 31000
 
+# "Nuisance jobs" are some jobs that run by default on TK4- which produce
+# printouts most people don't want to be spammed with. The following is an
+# array of regular expressions to identify job names that should be filtered
+nuisance_job_names:
+  - ^S.*_MF1$
+  - ^S.*_TSO$
+
 # The server can automatically delete inactive or unverified users.
 #
 # If both inactive_months_cleanup and unverified_months_cleanup are not set or

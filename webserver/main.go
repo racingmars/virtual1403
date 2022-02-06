@@ -26,6 +26,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -55,6 +56,7 @@ type application struct {
 	inactiveMonthsCleanup int
 	pdfCleanupDays        int
 	shareKey              *[db.ShareSecretKeyLength]byte
+	nuisanceJobs          []*regexp.Regexp
 }
 
 //go:embed favicon.ico
@@ -71,6 +73,8 @@ func main() {
 		}
 		log.Fatal("FATAL: configuration errors")
 	}
+
+	app.nuisanceJobs = config.nuisanceJobRegex
 
 	// If the user requested a font file, see if we can load it. Otherwise,
 	// use our standard embedded font.
@@ -188,6 +192,7 @@ func main() {
 	mux.Handle("/verify", app.session.Enable(http.HandlerFunc(app.verifyUser)))
 	mux.Handle("/pdf", http.HandlerFunc(app.pdf))
 	mux.Handle("/changeDelivery", app.session.Enable(http.HandlerFunc(app.changeDelivery)))
+	mux.Handle("/changeNuisance", app.session.Enable(http.HandlerFunc(app.changeNuisance)))
 
 	// Admin pages
 	mux.Handle("/admin/users", app.session.Enable(http.HandlerFunc(

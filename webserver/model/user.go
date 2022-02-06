@@ -41,6 +41,7 @@ type User struct {
 	LastVerificationEmail time.Time
 	SignupDate            time.Time
 	DisableEmailDelivery  bool
+	AllowNuisanceJobs     bool
 }
 
 // NewUser is a convenience function to create a new user with the

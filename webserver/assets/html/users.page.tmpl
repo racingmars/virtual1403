@@ -19,6 +19,7 @@
         <th>Verified</th>
         <th>Enabled</th>
         <th>Email Jobs</th>
+        <th>Nuisance Filter</th>
         <th>Unlimited</th>
         <th>Admin</th>
     </tr></thead>
@@ -33,6 +34,7 @@
             <td><input type="checkbox" disabled {{ if .Verified }}checked{{ end }}></td>
             <td><input type="checkbox" disabled {{ if .Enabled }}checked{{ end }}></td>
             <td><input type="checkbox" disabled {{ if not .DisableEmailDelivery }}checked{{ end }}></td>
+            <td><input type="checkbox" disabled {{ if not .AllowNuisanceJobs }}checked{{ end }}></td>
             <td><input type="checkbox" disabled {{ if .Unlimited }}checked{{ end }}></td>
             <td><input type="checkbox" disabled {{ if .Admin }}checked{{ end }}></td>
         </tr>

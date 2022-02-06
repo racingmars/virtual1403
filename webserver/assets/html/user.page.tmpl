@@ -141,6 +141,19 @@ access_key: "{{.apiKey}}"</pre></p>
     </form>
 {{ end }}
 
+<p class="is-size-5 block">Job Preferences</p>
+{{ if .nuisanceFilter }}
+    <p class="block">PDFs are <strong>not</strong> being generated for "nuisance jobs" like MF1 reports and TSO logouts.</p>
+    <form method="post" action="changeNuisance?action=enable" class="block">
+    <input class="button is-warning" type="submit" value="Enable nuisance job PDFs">
+    </form>
+{{ else }}
+    <p class="block">PDFs <strong>are</strong> being generated for "nuisance jobs" like MF1 reports and TSO logouts.</p>
+    <form method="post" action="changeNuisance?action=disable" class="block">
+    <input class="button is-warning" type="submit" value="Disable nuisance job PDFs">
+    </form>
+{{ end }}
+
 <p class="is-size-5 block">Change password</p>
 {{with .passwordError}}
     <div class="notification is-danger block">
