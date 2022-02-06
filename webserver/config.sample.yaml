@@ -19,6 +19,10 @@ database_file: virtual1403.db
 # printed in the log.
 create_admin: admin@example.com
 
+# The following email address will be provided to authenticated users in page
+# footers to contact server admin.
+server_admin_email: admin@example.com
+
 # font_file is an optional font file to use
 #font_file: font.ttf
 

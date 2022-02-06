@@ -51,6 +51,7 @@ type ServerConfig struct {
 	PDFDaysCleanup          int           `yaml:"pdf_cleanup_days"`
 	NuisanceJobNames        []string      `yaml:"nuisance_job_names"`
 	nuisanceJobRegex        []*regexp.Regexp
+	ServerAdmin             string `yaml:"server_admin_email"`
 }
 
 func readConfig(path string) (ServerConfig, []error) {
@@ -96,6 +97,12 @@ func readConfig(path string) (ServerConfig, []error) {
 		errs = append(errs,
 			fmt.Errorf("address `%s` does not appear to be valid",
 				c.MailConfig.FromAddress))
+	}
+
+	if !mailer.ValidateAddress(c.ServerAdmin) {
+		errs = append(errs,
+			fmt.Errorf("server_admin `%s` does not appear to be a "+
+				"valid email address", c.ServerAdmin))
 	}
 
 	if c.MailConfig.Server == "" {

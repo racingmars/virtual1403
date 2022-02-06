@@ -187,6 +187,7 @@ func (app *application) userInfo(w http.ResponseWriter, r *http.Request) {
 		"pdfRetention":        app.pdfCleanupDays,
 		"emailDisabled":       u.DisableEmailDelivery,
 		"nuisanceFilter":      !u.AllowNuisanceJobs,
+		"serverAdminContact":  app.adminEmail,
 	}
 
 	if responseValues["passwordError"] != nil {

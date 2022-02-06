@@ -57,6 +57,7 @@ type application struct {
 	pdfCleanupDays        int
 	shareKey              *[db.ShareSecretKeyLength]byte
 	nuisanceJobs          []*regexp.Regexp
+	adminEmail            string
 }
 
 //go:embed favicon.ico
@@ -75,6 +76,7 @@ func main() {
 	}
 
 	app.nuisanceJobs = config.nuisanceJobRegex
+	app.adminEmail = config.ServerAdmin
 
 	// If the user requested a font file, see if we can load it. Otherwise,
 	// use our standard embedded font.
