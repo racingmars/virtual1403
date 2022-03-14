@@ -19,6 +19,37 @@ executable and print to the sockdev printer device from your mainframe.
 For more information about configuring, see
 https://1403.bitnet.systems/docs/setup
 
+Printing Local Text Files
+-------------------------
+
+Instead of connecting to Hercules and processing print jobs, the agent also
+supports printing local text files. These are *not* processed as Hercules
+output: they are assumed to be UTF-8 encoded (compatible with US-ASCII), and
+do not support carriage control features such as overstrike (we just support
+standard CRLF Windows line endings or LF Unix line endings -- FF still starts
+a new page). No attempt is made at job separation: the entire text file will
+be converted to a single PDF file.
+
+Local file printing uses the output configuration in config.yaml, so you may
+send files to the online service or create PDFs locally.
+
+To print local files, use:
+
+`./agent -printfile filename.txt`
+
+To use an output configuration other than the default, use:
+
+`./agent -printfile filename.txt -output my-output-name`
+
+You may also use `-` as the filename, which will cause the agent to read from
+stdin:
+
+`./agent -printfile - < filename.txt`
+
+This could be used to combine multiple text files into one PDF, for example:
+
+`cat file1.txt file2.txt file3.txt | ./agent -printfile -`
+
 Acknowledgements
 ----------------
 

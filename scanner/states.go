@@ -133,7 +133,7 @@ func haveCR(s *scanner, b byte) stateFunc {
 }
 
 // haveLF is a state where we have received a LF control character, and we are
-// waiting to see if it is a bare LR, or a LFCF, or a sequence of multiple LFs.
+// waiting to see if it is a bare LR, or a LFCR, or a sequence of multiple LFs.
 func haveLF(s *scanner, b byte) stateFunc {
 	switch b {
 	case charCR:

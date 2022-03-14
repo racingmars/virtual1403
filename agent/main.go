@@ -35,11 +35,14 @@ import (
 // version can be set at build time
 var version string = "unknown"
 
+var configFile = flag.String("config", "config.yaml", "name of config file")
+var output = flag.String("output", "default", "profile to use for -printfile")
+var printFile = flag.String("printfile", "",
+	"print a single UTF-8 text file. Use filename \"-\" for stdin")
 var trace = flag.Bool("trace", false, "enable trace logging")
+var displayVersion = flag.Bool("version", false, "display version and quit")
 
 func main() {
-	displayVersion := flag.Bool("version", false,
-		"display version and quit")
 	flag.Parse()
 
 	if *displayVersion {
@@ -54,9 +57,9 @@ func main() {
 	}
 
 	// Load configuration file
-	inputs, outputs, err := loadConfig("config.yaml")
+	inputs, outputs, err := loadConfig(*configFile)
 	if err != nil {
-		log.Fatalf("FATAL: Unable to read config.yaml. %v", err)
+		log.Fatalf("FATAL: Unable to read config `%s`: %v", *configFile, err)
 	}
 
 	errs := validateConfig(inputs, outputs)
@@ -102,6 +105,21 @@ func main() {
 		}
 	}
 
+	// If user requested that we print a single file, we will do so then quit.
+	if *printFile != "" {
+		// Does the requested output config exist?
+		o, ok := outputs[*output]
+		if !ok {
+			log.Fatalf("FATAL: Output configuration [%s] doesn't exist",
+				*output)
+		}
+
+		runFilePrinter(o, *printFile)
+
+		return
+	}
+
+	// Otherwise...
 	// Start a thread for each input and run until they all stop...which will
 	// usually be never; typically user will Ctrl-C out of the agent. We'll
 	// wait 250ms between startups so the initial log messages from each don't
@@ -157,6 +175,46 @@ func runPrinter(inputName, outputName string, input InputConfig,
 		log.Printf("INFO:  [%s] Re-trying Hercules connection in 10 seconds...",
 			inputName)
 		time.Sleep(10 * time.Second)
+	}
+}
+
+func runFilePrinter(output OutputConfig, filename string) {
+	var r io.ReadCloser
+	if *printFile == "-" {
+		r = os.Stdin
+	} else {
+		f, err := os.Open(*printFile)
+		if err != nil {
+			log.Fatalf("FATAL: Couldn't open file [%s]: %v",
+				*printFile, err)
+		}
+		r = f
+	}
+	defer r.Close()
+
+	var handler scanner.PrinterHandler
+	var err error
+
+	if output.Mode == "local" {
+		log.Printf("INFO:  Will create PDF in directory `%s`",
+			output.OutputDir)
+		// Set up our output handler
+		handler, err = newPDFOutputHandler(output.OutputDir, output.Profile,
+			output.font, "fileReader")
+		if err != nil {
+			log.Printf("ERROR: %v", err)
+			return
+		}
+	} else {
+		log.Printf("INFO:  will use online print API at `%s`",
+			output.ServiceAddress)
+		handler = newOnlineOutputHandler(output.ServiceAddress, output.APIKey,
+			output.Profile, "fileReader")
+	}
+
+	err = scanner.ScanUTF8Single(r, "localFile", handler, *trace)
+	if err != nil {
+		log.Fatalf("FATAL: %v", err)
 	}
 }
 

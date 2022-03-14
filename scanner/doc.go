@@ -1,4 +1,4 @@
-// Copyright 2021 Matthew R. Wilson <mwilson@mattwilson.org>
+// Copyright 2021-2022 Matthew R. Wilson <mwilson@mattwilson.org>
 //
 // This file is part of virtual1403
 // <https://github.com/racingmars/virtual1403>.
@@ -76,5 +76,11 @@ in the dot language:
 	}
 
 Is this all slightly over-complicated for our needs? Perhaps.
+
+This is also a simpler scanner implemented in filescanner.go. This is used for
+the single-file-print mode of the agent, which prints a single UTF-8-encoded
+text file. It does not attempt any job separation, and carriage control
+features such as overstrike are not available since the input is an arbitrary
+text file which may have either DOS or Unix line endings.
 */
 package scanner

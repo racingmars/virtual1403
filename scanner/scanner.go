@@ -28,21 +28,6 @@ import (
 	"time"
 )
 
-// PrinterHandler interface receives the output of printer output parsing.
-type PrinterHandler interface {
-	AddLine(line string, linefeed bool)
-	PageBreak()
-	EndOfJob(jobinfo string)
-}
-
-const maxLineLen = 132
-
-const (
-	charLF byte = 0xA
-	charFF byte = 0xC
-	charCR byte = 0xD
-)
-
 type stateFunc func(*scanner, byte) stateFunc
 
 type scanner struct {
