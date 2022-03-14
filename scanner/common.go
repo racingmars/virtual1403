@@ -28,7 +28,8 @@ type PrinterHandler interface {
 const maxLineLen = 132
 
 const (
-	charLF byte = 0xA
-	charFF byte = 0xC
-	charCR byte = 0xD
+	charTab byte = 0x9
+	charLF  byte = 0xA
+	charFF  byte = 0xC
+	charCR  byte = 0xD
 )
