@@ -25,6 +25,8 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
+	"regexp"
 	"sync"
 	"time"
 
@@ -180,8 +182,10 @@ func runPrinter(inputName, outputName string, input InputConfig,
 
 func runFilePrinter(output OutputConfig, filename string) {
 	var r io.ReadCloser
+	var jobname string
 	if *printFile == "-" {
 		r = os.Stdin
+		jobname = "stdin"
 	} else {
 		f, err := os.Open(*printFile)
 		if err != nil {
@@ -189,8 +193,18 @@ func runFilePrinter(output OutputConfig, filename string) {
 				*printFile, err)
 		}
 		r = f
+		jobname = filepath.Base(filename)
 	}
 	defer r.Close()
+
+	// job name character set is pretty restricted, we'll change any
+	// non-allowed character to _
+	jobRegex := regexp.MustCompile(`[^a-zA-Z0-9_]`)
+	jobname = jobRegex.ReplaceAllString(jobname, "_")
+	// and limit to 25 characters if needed
+	if len(jobname) > 25 {
+		jobname = jobname[:25]
+	}
 
 	var handler scanner.PrinterHandler
 	var err error
@@ -212,7 +226,7 @@ func runFilePrinter(output OutputConfig, filename string) {
 			output.Profile, "fileReader")
 	}
 
-	err = scanner.ScanUTF8Single(r, "localFile", handler, *trace)
+	err = scanner.ScanUTF8Single(r, jobname, handler, *trace)
 	if err != nil {
 		log.Fatalf("FATAL: %v", err)
 	}
