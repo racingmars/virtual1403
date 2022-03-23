@@ -83,9 +83,13 @@ func main() {
 			}
 
 			// Verify we have a font we can use. If the user doesn't provide a
-			// font, we will use our embedded copy of IBM Plex Mono. If the user
-			// does provide a font, we will make sure we can read the file, use
-			// it in a PDF, and that it is a fixed-width font.
+			// font, we will use our embedded copy of IBM Plex Mono. If the
+			// user does provide a font, we will make sure we can read the
+			// file, use it in a PDF, and that it is a fixed-width font.
+			//
+			// Note that the user's custom font is only used for the
+			// "default-" profiles; the retro- and modern- profiles will use
+			// one of our embedded fonts.
 			var font []byte
 			if conf.FontFile == "" {
 				// easy... just use default font by setting font to null

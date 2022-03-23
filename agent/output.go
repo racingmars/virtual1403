@@ -34,6 +34,7 @@ type pdfOutputHandler struct {
 	outputDir string
 	font      []byte
 	inputName string
+	profile   string
 }
 
 func newPDFOutputHandler(outputDir, profile string, fontOverride []byte,
@@ -43,6 +44,7 @@ func newPDFOutputHandler(outputDir, profile string, fontOverride []byte,
 		outputDir: outputDir,
 		font:      fontOverride,
 		inputName: inputName,
+		profile:   profile,
 	}
 	var err error
 
@@ -66,8 +68,7 @@ func (o *pdfOutputHandler) EndOfJob(jobinfo string) {
 	// new job.
 	defer func() {
 		var err error
-		o.job, err = vprinter.New1403(o.font, 11.4, 5, true, true,
-			vprinter.DarkGreen, vprinter.LightGreen)
+		o.job, err = vprinter.NewProfile(o.profile, o.font, 11.4)
 		if err != nil {
 			log.Printf("ERROR: [%s] couldn't re-initialize virtual 1403: %v",
 				o.inputName, err)
