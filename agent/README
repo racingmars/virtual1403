@@ -50,6 +50,14 @@ This could be used to combine multiple text files into one PDF, for example:
 
 `cat file1.txt file2.txt file3.txt | ./agent -printfile -`
 
+If your local file uses ASA carriage control characters in the first byte of
+each line, you may use the `-asa` flag in conjunction with `-printfile`. In
+this case, page breaks ("1"), overstrike ("+"), and multiple line skipping
+("0" and "-") will be controlled by the first character of the line in the
+input file. Regular lines must start with a single space character (" ").
+Handling of ASCII FF is disabled in -asa mode. The ASA characters 2–9, A, B,
+and C are not supported (these typically position to vertical tab stops).
+
 Acknowledgements
 ----------------
 

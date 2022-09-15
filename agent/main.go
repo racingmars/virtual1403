@@ -41,6 +41,8 @@ var configFile = flag.String("config", "config.yaml", "name of config file")
 var output = flag.String("output", "default", "profile to use for -printfile")
 var printFile = flag.String("printfile", "",
 	"print a single UTF-8 text file. Use filename \"-\" for stdin")
+var useASA = flag.Bool("asa", false, "When using -printfile, file has ASA "+
+	"carriage control characters in first position of each line")
 var trace = flag.Bool("trace", false, "enable trace logging")
 var displayVersion = flag.Bool("version", false, "display version and quit")
 
@@ -56,6 +58,11 @@ func main() {
 
 	if *trace {
 		log.Printf("TRACE: trace logging enabled")
+	}
+
+	if *useASA && *printFile == "" {
+		log.Fatalf("FATAL: the -asa flag is only used with the -printFile " +
+			"parameter.")
 	}
 
 	// Load configuration file
@@ -230,7 +237,11 @@ func runFilePrinter(output OutputConfig, filename string) {
 			output.Profile, "fileReader")
 	}
 
-	err = scanner.ScanUTF8Single(r, jobname, handler, *trace)
+	if *useASA {
+		err = scanner.ScanASAUTF8Single(r, jobname, handler, *trace)
+	} else {
+		err = scanner.ScanUTF8Single(r, jobname, handler, *trace)
+	}
 	if err != nil {
 		log.Fatalf("FATAL: %v", err)
 	}
