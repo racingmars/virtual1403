@@ -27,6 +27,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -552,6 +553,10 @@ func (app *application) adminDeleteUser(w http.ResponseWriter,
 	http.Redirect(w, r, "users", http.StatusSeeOther)
 }
 
+// We require a firstname and lastname for signup; we'll assume any two
+// space-separated words are okay.
+var nameRegexp = regexp.MustCompile(`\S+\s+\S+`)
+
 // signup is the HTTP POST handler for /signup, to create new user accounts.
 // If everything is okay, we will create the new user in an unverified state
 // and send the new email address the verification email.
@@ -578,9 +583,10 @@ func (app *application) signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if name == "" {
+	name = strings.TrimSpace(name)
+	if !nameRegexp.MatchString(name) {
 		app.renderSignupError(w, r, email, name,
-			"Must provide a name.")
+			"Must provide a first and last name.")
 		return
 	}
 
