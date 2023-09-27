@@ -15,7 +15,7 @@
         <th>Name</th>
         <th>Jobs</th>
         <th>Pages</th>
-        <th>Last Job <span class="is-size-7">(UTC)</span></th>
+        <th>Last Job / <em>Signup Date</em> <span class="is-size-7">(UTC)</span></th>
         <th>Verified</th>
         <th>Enabled</th>
         <th>Email Jobs</th>
@@ -30,7 +30,7 @@
             <td>{{.FullName}}</td>
             <td>{{.JobCount}}</td>
             <td>{{.PageCount}}</td>
-            <td>{{.LastJob.Format "2006-01-02 15:04:05"}}</td>
+            <td>{{ if eq .JobCount 0 }}<em>{{.SignupDate.Format "2006-01-02 15:04:05"}}</em> {{ else }} {{.LastJob.Format "2006-01-02 15:04:05"}} {{ end }}</td>
             <td><input type="checkbox" disabled {{ if .Verified }}checked{{ end }}></td>
             <td><input type="checkbox" disabled {{ if .Enabled }}checked{{ end }}></td>
             <td><input type="checkbox" disabled {{ if not .DisableEmailDelivery }}checked{{ end }}></td>
