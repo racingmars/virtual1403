@@ -41,6 +41,8 @@ var configFile = flag.String("config", "config.yaml", "name of config file")
 var output = flag.String("output", "default", "profile to use for -printfile")
 var printFile = flag.String("printfile", "",
 	"print a single UTF-8 text file. Use filename \"-\" for stdin")
+var useCDC = flag.Bool("cdc", false, "When using -printfile, file has CDC "+
+	"carriage control characters in first position of each line")
 var useASA = flag.Bool("asa", false, "When using -printfile, file has ASA "+
 	"carriage control characters in first position of each line")
 var trace = flag.Bool("trace", false, "enable trace logging")
@@ -58,6 +60,11 @@ func main() {
 
 	if *trace {
 		log.Printf("TRACE: trace logging enabled")
+	}
+
+	if *useCDC && *printFile == "" {
+		log.Fatalf("FATAL: the -cdc flag is only used with the -printFile " +
+			"parameter.")
 	}
 
 	if *useASA && *printFile == "" {
@@ -236,8 +243,9 @@ func runFilePrinter(output OutputConfig, filename string) {
 		handler = newOnlineOutputHandler(output.ServiceAddress, output.APIKey,
 			output.Profile, "fileReader")
 	}
-
-	if *useASA {
+    if *useCDC {
+        err = scanner.ScanCDCUTF8Single(r, jobname, handler, *trace)
+    } else if *useASA {
 		err = scanner.ScanASAUTF8Single(r, jobname, handler, *trace)
 	} else {
 		err = scanner.ScanUTF8Single(r, jobname, handler, *trace)
