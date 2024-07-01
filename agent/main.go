@@ -62,6 +62,10 @@ func main() {
 		log.Printf("TRACE: trace logging enabled")
 	}
 
+    if *useASA && *useCDC {
+        log.Fatalf("FATAL: the -asa and -cdc flags are mutually exclusive")
+    }
+
 	if *useCDC && *printFile == "" {
 		log.Fatalf("FATAL: the -cdc flag is only used with the -printFile " +
 			"parameter.")

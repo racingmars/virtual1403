@@ -1,3 +1,4 @@
+// Copyright 2024 William Schaub <william.schaub@gmail.com>
 // Copyright 2022 Matthew R. Wilson <mwilson@mattwilson.org>
 //
 // This file is part of virtual1403
