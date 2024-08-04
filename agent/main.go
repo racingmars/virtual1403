@@ -1,6 +1,6 @@
 package main
 
-// Copyright 2021-2022 Matthew R. Wilson <mwilson@mattwilson.org>
+// Copyright 2021-2024 Matthew R. Wilson <mwilson@mattwilson.org>
 //
 // This file is part of virtual1403
 // <https://github.com/racingmars/virtual1403>.
@@ -319,7 +319,7 @@ func startupMessage() {
 	fmt.Fprintln(os.Stderr, `  \_/ |_|_|   \__|\__,_|\__,_|_| |_|  |_|  \___/____/`)
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "virtual1403 <https://github.com/racingmars/virtual1403/>")
-	fmt.Fprintln(os.Stderr, "  copyright 2021-2022 Matthew R. Wilson.")
+	fmt.Fprintln(os.Stderr, "  copyright 2021-2024 Matthew R. Wilson.")
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "virtual1403 is free software, distributed under the GPL v3")
 	fmt.Fprintln(os.Stderr, "  (or later) license; see COPYING for details.")
