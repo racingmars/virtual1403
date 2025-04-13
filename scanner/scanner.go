@@ -127,6 +127,8 @@ func (s *scanner) emitLine(linefeed bool) {
 		switch s.curline[i] {
 		case 0x5e:
 			r = '¬'
+		case 0xa6:
+			r = '¦'
 		case 0xd6:
 			r = '¢'
 		case 0xd7:
