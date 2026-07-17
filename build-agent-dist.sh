@@ -9,7 +9,9 @@ VERSION=$(cat VERSION)
 
 rm -rf dist/v$VERSION
 BASEPATH=dist/v$VERSION/virtual1403-agent-v${VERSION}_
-mkdir -p ${BASEPATH}{freebsd-amd64,linux-amd64,linux-armv7,windows-amd64,macos-amd64,macos-aarch64}
+for x in freebsd-amd64 linux-amd64 linux-armv7 linux-arm64v7 linux-armv6 linux-arm64v6 windows-amd64 macos-amd64 macos-aarch64; do
+    mkdir -p ${BASEPATH}${x}
+done
 
 echo "Building for linux/amd64..."
 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=$VERSION" -trimpath -o ${BASEPATH}linux-amd64/virtual1403 github.com/racingmars/virtual1403/agent
