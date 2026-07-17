@@ -44,15 +44,19 @@ func fileGetNextByte(s *fileScanner, b rune) fileStateFunc {
 			log.Printf("TRACE: scanner for TAB in fileGetNextByte")
 		}
 		// we always add at least one space for a tab, then we get to the
-		// next-highest multiple of 8 position
+		// next-highest multiple of 8 position. We must stop if we reach the
+		// end of the line so we don't write past the end of curline.
 		s.curline[s.pos] = ' '
 		s.pos++
+		if s.pos >= maxLineLen {
+			return fileDisposeBytes
+		}
 		for s.pos%8 != 0 {
 			s.curline[s.pos] = ' '
 			s.pos++
-		}
-		if s.pos >= maxLineLen {
-			return fileDisposeBytes
+			if s.pos >= maxLineLen {
+				return fileDisposeBytes
+			}
 		}
 		return fileGetNextByte
 	default:
