@@ -32,6 +32,16 @@ func getNextByte(s *scanner, b byte) stateFunc {
 		s.newjob = false
 	}
 
+	if b == 0x1b && wasNewJob {
+		// Printer setup such as ESC 3 n / ESC C n precedes the job; stay in
+		// new-job state so back-to-back sequences are also dropped.
+		if s.trace {
+			log.Printf("TRACE: [%s] ignoring ESC control sequence", s.tag)
+		}
+		s.newjob = true
+		return escape1
+	}
+
 	switch b {
 	case charLF:
 		if s.trace {
@@ -84,6 +94,11 @@ func getNextByte(s *scanner, b byte) stateFunc {
 		return getNextByte
 	}
 }
+
+// escape1 and escape2 discard the two bytes following an ESC.
+func escape1(s *scanner, b byte) stateFunc { return escape2 }
+
+func escape2(s *scanner, b byte) stateFunc { return getNextByte }
 
 // disposeBytes is a state where we discard additional bytes that come in and
 // we wait for a control character.
