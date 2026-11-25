@@ -64,6 +64,18 @@ func NewProfile(profile string, fontOverride []byte,
 		return New1403(tempFont, tempSize, 5, true, false, ColorRGB{}, ColorRGB{})
 	case "default-plain-noskip":
 		return New1403(tempFont, tempSize, 0, true, false, ColorRGB{}, ColorRGB{})
+	case "custom-green":
+		return New1403(tempFont, tempSize, 5, false, true, DarkGreen, LightGreen)
+	case "custom-green-noskip":
+		return New1403(tempFont, tempSize, 0, false, true, DarkGreen, LightGreen)
+	case "custom-blue":
+		return New1403(tempFont, tempSize, 5, false, true, DarkBlue, LightBlue)
+	case "custom-blue-noskip":
+		return New1403(tempFont, tempSize, 0, false, true, DarkBlue, LightBlue)
+	case "custom-plain":
+		return New1403(tempFont, tempSize, 5, false, false, ColorRGB{}, ColorRGB{})
+	case "custom-plain-noskip":
+		return New1403(tempFont, tempSize, 0, false, false, ColorRGB{}, ColorRGB{})
 	case "retro-green":
 		return New1403(wornFont, 10, 5, true, true, DarkGreen, LightGreen)
 	case "retro-green-noskip":
