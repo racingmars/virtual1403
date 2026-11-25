@@ -41,6 +41,8 @@ output_directory: "pdfs"
 # default-green, default-green-noskip, default-blue, default-blue-noskip,
 # default-plain, default-plain-noskip, retro-green, retro-green-noskip,
 # retro-blue, retro-blue-noskip, retro-plain, retro-plain-noskip,
+# custom-green, custom-green-noskip, custom-blue, custom-blue-noskip,
+# custom-plain, custom-plain-noskip
 # modern-green, modern-green-noskip, modern-blue, modern-blue-noskip,
 # modern-plain, modern-plain-noskip
 #
@@ -52,6 +54,9 @@ output_directory: "pdfs"
 # <http://ibm-1401.info/Sched2008December.html#1403-Font>.
 # This has a very limited character set, matching the standard "A" chain of
 # 48 characters (but currently missing &).
+#
+# "custom" profiles use the font specified in the config file. 
+# It does NOT fold lowercase into upper.
 #
 # "modern" used IBM Plex Mono and allows lowercase letters.
 #
