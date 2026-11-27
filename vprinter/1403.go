@@ -98,8 +98,9 @@ func (job *virtual1403) AddLine(s string, linefeed bool) int {
 	if job.curLine >= maxLinesPerPage {
 		job.NewPage()
 	}
-	if len(s) > maxLineCharacters {
-		s = s[0:maxLineCharacters]
+	runes := []rune(s)
+	if len(runes) > maxLineCharacters {
+		s = string(runes[:maxLineCharacters])
 	}
 	// 1403 only had capital letters; we'll enforce that if requested
 	if job.forceUpper {
