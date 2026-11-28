@@ -28,7 +28,7 @@ We tolerate a variety of combinations of CR, LF, and FF. A bare CR will cause
 the next line to overtype the current line. Bare LF, CR+LF, or LF+CR have the
 effect of CR+LF.
 
-Lines will be trimmed to 132 bytes; additional bytes on a line will be
+Lines will be trimmed to 132 UTF-8 runes; additional bytes on a line will be
 discarded.
 
 The implementation is a state machine that reads one byte at a time, updates

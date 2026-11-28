@@ -23,6 +23,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"unicode/utf8"
 
 	"github.com/jung-kurt/gofpdf"
 )
@@ -98,4 +99,22 @@ func verifyFixedWidth(font []byte) error {
 		return fmt.Errorf("font is not fixed width")
 	}
 	return nil
+}
+
+// trimToRuneLen trims the input string, str, to no more than n runes. It
+// does not allocate; the result is a slice of str. Invalid UTF-8 bytes are
+// each counted as one rune and passed through unchanged.
+func trimToRuneLen(str string, n int) string {
+	if utf8.RuneCountInString(str) <= n {
+		return str
+	}
+
+	runes := 0
+	i := 0
+	for i < len(str) && runes < n {
+		_, size := utf8.DecodeRuneInString(str[i:])
+		runes++
+		i += size
+	}
+	return str[0:i]
 }

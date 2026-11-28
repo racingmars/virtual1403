@@ -1,4 +1,4 @@
-package main
+package vprinter
 
 // Copyright 2021 Matthew R. Wilson <mwilson@mattwilson.org>
 //
@@ -19,6 +19,7 @@ package main
 // along with virtual1403. If not, see <https://www.gnu.org/licenses/>.
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -34,6 +35,11 @@ func TestTrim(t *testing.T) {
 		{"Hello, 世界", "Hello, 世界", 100},
 		{"Hello, 世界", "Hello, 世界", 9},
 		{"Hello, 世界", "Hello, 世", 8},
+		// Two-byte characters emitted by the scanner, straddling the limit
+		{strings.Repeat("a", 131) + "¢¬¦", strings.Repeat("a", 131) + "¢", 132},
+		{strings.Repeat("¦", 140), strings.Repeat("¦", 132), 132},
+		// Invalid UTF-8 bytes count as one rune each and pass through
+		{"ab\xc3cd", "ab\xc3", 3},
 	}
 
 	for _, c := range testcases {

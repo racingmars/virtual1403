@@ -301,14 +301,13 @@ func processPrintDirectives(r io.Reader, job vprinter.Job,
 		directive := line[0:2]
 		param := line[2:]
 
-		// In all cases, param must be a valid UTF-8 string <= 132 runes, so
-		// we'll take care of that now.
+		// In all cases, param must be a valid UTF-8 string.
 		if !utf8.ValidString(param) {
 			return "", errors.New("invalid UTF-8 string")
 		}
 
-		// Trim to 132 runes
-		param = trimToRuneLen(param, 132)
+		// Lines longer than 132 runes will be trimmed by the AddLine()
+		// method.
 
 		var pages int
 		switch directive {
@@ -339,22 +338,4 @@ func processPrintDirectives(r io.Reader, job vprinter.Job,
 		return "", err
 	}
 	return jobinfo, nil
-}
-
-// trimToRuneLen trims the input string, str, to no more than n runes. The
-// input string must be a valid UTF-8 string; the behavior of this function
-// is undefined if not.
-func trimToRuneLen(str string, n int) string {
-	if utf8.RuneCountInString(str) <= n {
-		return str
-	}
-
-	runes := 0
-	i := 0
-	for i < len(str) && runes < n {
-		_, size := utf8.DecodeRuneInString(str[i:])
-		runes++
-		i += size
-	}
-	return str[0:i]
 }
