@@ -279,7 +279,7 @@ func (a *application) printjob(w http.ResponseWriter, r *http.Request) {
 }
 
 // jobInfoRegex matches valid/allowed job info data
-var jobInfoRegex = regexp.MustCompile(`^[a-zA-z0-9_]{0,25}$`)
+var jobInfoRegex = regexp.MustCompile(`^[a-zA-Z0-9_]{0,25}$`)
 
 // processPrintDirectives will apply print directives to the virtual printer
 // job, returning an error if the input data is invalid. Processing will stop
