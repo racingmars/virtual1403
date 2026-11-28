@@ -33,6 +33,11 @@ type fileScanner struct {
 	curline  [maxLineLen]rune
 	handler  PrinterHandler
 	trace    bool
+	atStart  bool
+
+	// pagePending delays a page break until more output follows, so a
+	// trailing form feed doesn't create an empty last page.
+	pagePending bool
 }
 
 // ScanUTF8Single reads input from a reader (typically local file) and prints
@@ -47,6 +52,7 @@ func ScanUTF8Single(r io.Reader, jobname string, handler PrinterHandler,
 	s.handler = handler
 	s.trace = trace
 	s.nextfunc = fileGetNextByte
+	s.atStart = true
 
 	for {
 		nextRune, _, err := s.buf.ReadRune()
@@ -69,11 +75,20 @@ func (s *fileScanner) emitLine() {
 	if s.trace {
 		log.Printf("TRACE: scanner got line: %U", s.curline[:s.pos])
 	}
+	if s.pagePending {
+		s.pagePending = false
+		s.handler.PageBreak()
+	}
 	s.handler.AddLine(string(s.curline[:s.pos]), true)
 	s.pos = 0
 }
 
 func (s *fileScanner) emitLineAndPage() {
-	s.emitLine()
-	s.handler.PageBreak()
+	if s.pos > 0 {
+		s.emitLine()
+	} else if s.pagePending {
+		// Consecutive form feeds: keep the blank page between them.
+		s.handler.PageBreak()
+	}
+	s.pagePending = true
 }

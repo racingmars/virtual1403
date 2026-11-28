@@ -21,6 +21,12 @@ package scanner
 import "log"
 
 func fileGetNextByte(s *fileScanner, b rune) fileStateFunc {
+	if b == 0x1b && s.atStart {
+		// Leading printer setup such as ESC 3 n / ESC C n; drop it.
+		return fileEscape1
+	}
+	s.atStart = false
+
 	switch b {
 	case rune(charLF):
 		if s.trace {
@@ -68,6 +74,11 @@ func fileGetNextByte(s *fileScanner, b rune) fileStateFunc {
 		return fileGetNextByte
 	}
 }
+
+// fileEscape1 and fileEscape2 discard the two bytes following an ESC.
+func fileEscape1(s *fileScanner, b rune) fileStateFunc { return fileEscape2 }
+
+func fileEscape2(s *fileScanner, b rune) fileStateFunc { return fileGetNextByte }
 
 // fileDisposeBytes is a state where we discard additional bytes that come in
 // and we wait for a control character.

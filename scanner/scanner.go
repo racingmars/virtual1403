@@ -40,6 +40,13 @@ type scanner struct {
 	newjob   bool
 	trace    bool
 	tag      string
+
+	// zosJobID and zosJobName cache the most recently seen JOBID/JOB NAME
+	// lines from a z/OS-style banner, since those lines have already
+	// scrolled out of prevline by the time the trailing END banner line
+	// (matched by zosEojRegexp) is detected.
+	zosJobID   string
+	zosJobName string
 }
 
 const defaultJobTimeout = 500 * time.Millisecond
@@ -153,23 +160,45 @@ func (s *scanner) emitLine(linefeed bool) {
 	s.handler.AddLine(s.prevline, linefeed)
 	s.pos = 0
 
+	// Cache z/OS banner JOBID / JOB NAME lines as we see them, since by
+	// the time the trailing END banner line is detected, these lines have
+	// long since scrolled past and out of s.prevline.
+	if matches := zosJobIDRegexp.FindStringSubmatch(s.prevline); matches != nil {
+		s.zosJobID = matches[1]
+	} else if matches := zosJobNameRegexp.FindStringSubmatch(s.prevline); matches != nil {
+		s.zosJobName = matches[1]
+	}
 }
 
 // This regular expression, *if immediately followed by a LF+FF*, indicates
 // end of job from the Moseley MVS 3.8J sysgen and TK4-.
 var eojRegexp = regexp.MustCompile(
 	`(?m)\*+.+END.+(JOB|STC|TSU)\D+(\d+)\s+(\S+)\s+.+ROOM.+END.+\*+`)
+var zosEojRegexp = regexp.MustCompile(
+	`^\*+END(?:\*+END){2,}\*+\s*$`,
+)
+
+// These match the JOBID and JOB NAME lines from a z/OS JES2 output banner,
+// e.g.:
+//   - JOBID:         JOB09006
+//   - JOB NAME:      HELLOW
+var zosJobIDRegexp = regexp.MustCompile(`^\*\s*JOBID:\s*(\S+)`)
+var zosJobNameRegexp = regexp.MustCompile(`^\*\s*JOB NAME:\s*(\S+)`)
 
 // When we emit a line and page together (e.g. we got a LF followed by FF),
 // we might be at the end of the job, so we'll check for the end of the
 // separator page.
 func (s *scanner) emitLineAndPage() {
-	s.emitLine(true)
+	// A pending line (LF+FF streams) must be emitted so we check it; with
+	// CRLF+FF it was already emitted and emitting again would blank prevline.
+	if s.pos > 0 {
+		s.emitLine(true)
+	}
 	if s.trace {
 		log.Printf("TRACE: [%s] scanner checking for end of job on line: %s",
 			s.tag, s.prevline)
 	}
-	if eojRegexp.MatchString(s.prevline) {
+	if eojRegexp.MatchString(s.prevline) || zosEojRegexp.MatchString(s.prevline) {
 		s.endJob(false)
 	} else {
 		s.handler.PageBreak()
@@ -195,12 +224,26 @@ func (s *scanner) endJob(wasTimeout bool) {
 			// Should be the job name
 			jobinfo = jobinfo + "_" + matches[3]
 		}
+		// eojRegexp didn't match (this was a z/OS-style job, detected via
+		// zosEojRegexp instead), so fall back to whatever JOBID / JOB
+		// NAME we cached from the banner as it scrolled past.
+		if jobinfo == "" && (s.zosJobID != "" || s.zosJobName != "") {
+			jobinfo = s.zosJobID
+			if s.zosJobName != "" {
+				if jobinfo != "" {
+					jobinfo += "_"
+				}
+				jobinfo += s.zosJobName
+			}
+		}
 	}
 
 	s.handler.EndOfJob(jobinfo)
 	s.prevline = ""
 	s.pos = 0
 	s.newjob = true
+	s.zosJobID = ""
+	s.zosJobName = ""
 
 	// No timeout for the next read awaiting beginning of the next job
 	if err := s.conn.SetReadDeadline(time.Time{}); err != nil {
